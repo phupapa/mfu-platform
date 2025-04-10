@@ -1,0 +1,14 @@
+services:
+  laundry:
+    image: php:8.2-apache
+    container_name: laundry
+    ports:
+      - "8081:80"
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true

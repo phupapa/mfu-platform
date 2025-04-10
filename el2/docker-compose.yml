@@ -1,0 +1,12 @@
+services:
+  el2:
+    build: .
+    container_name: el2
+    expose:
+      - "80:80"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
