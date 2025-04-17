@@ -21,6 +21,8 @@ services:
     ports:
       - "4500:4500"  # API server
     command: ["sh", "-c", "npm install && node server.js"]
+    env_file:
+      - ./Backend/.env
     environment:
       - NODE_ENV=development
       - PORT=4500
