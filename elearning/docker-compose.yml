@@ -24,13 +24,7 @@ services:
     env_file:
       - ./Backend/.env
     environment:
-      - NODE_ENV=development
-      - PORT=4500
-      - DB_HOST=db
-      - DB_USER=root
-      - DB_PASSWORD=rootpassword
-      - DB_NAME=elearning
-      - DATABASE_URL=mysql://root:rootpassword@db:3306/elearning
+      - NODE_ENV=development 
     depends_on:
       - db
     networks:
