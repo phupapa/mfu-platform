@@ -93,6 +93,10 @@ app.use(courseRoutes);
 app.use(userRoutes);
 // Initialize Drizzle and start the server
 
+app.get('/health', (req, res) => {
+  res.send({ status: 'ok' });
+});
+
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
