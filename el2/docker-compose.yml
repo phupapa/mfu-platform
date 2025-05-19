@@ -3,7 +3,7 @@ services:
     build: .
     container_name: el2
     expose:
-      - "80:80"
+      - "8082:80"
     networks:
       - app-network
 
