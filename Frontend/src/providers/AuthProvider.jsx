@@ -46,7 +46,7 @@ const AuthProvider = () => {
   if (isLoading) return <SpinLoader />;
   if (isError)
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex flex-col gap-5 items-center justify-center h-screen">
         Error checking user authentication.
         <Link to={"/auth/login"} replace>
           <p className="p-4 border border-gray-400 my-5 text-black hover:bg-gray-300 hover:text-black/70 rounded-md">
