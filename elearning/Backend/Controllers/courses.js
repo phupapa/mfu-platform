@@ -21,6 +21,8 @@ const {
   quizzes,
   tests,
   savedcourse,
+  course_reviews,
+  test_status,
 } = require("../db");
 
 exports.getCourses = async (req, res) => {
@@ -31,7 +33,7 @@ exports.getCourses = async (req, res) => {
       .where(eq(allcourses.status, "completed"))
       .orderBy("createdAt", "desc"); // Use "allcourses" as the table name
     if (!courses || courses.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "Courses not found!",
       });
@@ -63,7 +65,7 @@ exports.courseDetail = async (req, res) => {
       .where(eq(allcourses.course_id, courseID));
 
     if (courseData.length === 0) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(400).json({ message: "Course not found" });
     }
 
     const courseDetails = courseData.reduce(
@@ -127,7 +129,6 @@ exports.courseDetail = async (req, res) => {
       totalQuizzesCount: totalQuizzes,
     });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -147,7 +148,7 @@ exports.get_PopularCourses = async (req, res) => {
       .where(eq(allcourses.is_popular, true));
     // Fix the condition: use `=== 0` to check for no results
     if (Popularcourses.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "Not found!!!",
       });
@@ -185,36 +186,40 @@ exports.createCourse = async (req, res) => {
   const instructor_image = req.files?.instructor_image
     ? req.files.instructor_image[0].path
     : req.body.instructor_image;
-  console.log(instructor_image);
+
   let secureThumnbUrlArray = "";
   let secureDemoUrlArray = "";
   let secureInstructor_imgUrlArray = "";
   try {
-    // Validate input using Zod schema
-    // const parsedData = courseSchema.safeParse({
-    //   course_id: course_id,
-    //   course_name: title,
-    //   course_description: description,
-    //   category,
-    //   course_image_url: thumbnail,
-    //   overview,
-    //   demo_URL: courseDemo,
-    //   instructor_name: "Aung aung",
-    // });
-    // if (!parsedData.success) {
-    //   return res.status(400).json({
-    //     isSuccess: false,
-    //     message: "Validation failed.",
-    //     errors: parsedData.error.errors, // Return detailed validation errors
-    //   });
-    // }
+    const parsedData = courseSchema.safeParse({
+      course_id: course_id,
+      course_name: title,
+      course_description: description,
+      category,
+      course_image_url: thumbnail,
+      overview,
+      demo_URL: courseDemo,
+      instructor_name,
+      about_instructor,
+      instructor_image_url: instructor_image,
+    });
+    if (!parsedData.success) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: "Validation failed.",
+        errors: parsedData.error.errors, // Return detailed validation errors
+      });
+    }
+
     const uploadPromises = [];
     // Handle thumbnail upload
+    console.log("thn", thumbnail);
     if (thumbnail) {
       const thumbnailUpload = new Promise((resolve, reject) => {
         cloudinary.uploader.upload(thumbnail, (err, result) => {
           if (err) {
-            reject(new Error("Cloud upload failed for thumbnail."));
+            console.log(err);
+            reject(new Error("Cloud upload failed for thumbnail.", err));
           } else {
             secureThumnbUrlArray = result.secure_url;
             resolve();
@@ -224,7 +229,6 @@ exports.createCourse = async (req, res) => {
       uploadPromises.push(thumbnailUpload);
     }
     if (instructor_image) {
-      console.log(instructor_image);
       const instructor_imageUpload = new Promise((resolve, reject) => {
         cloudinary.uploader.upload(instructor_image, (err, result) => {
           if (err) {
@@ -245,7 +249,6 @@ exports.createCourse = async (req, res) => {
           { resource_type: "video" },
           (err, result) => {
             if (err) {
-              console.error("Cloud upload failed for course demo:", err); // Improved error logging
               reject(new Error("Cloud upload failed for course demo."));
             } else {
               secureDemoUrlArray = result.secure_url;
@@ -325,8 +328,6 @@ exports.createCourse = async (req, res) => {
       instructor_image &&
       about_instructor
     ) {
-     
-  
       const NewCourse = await db
         .insert(allcourses)
         .values({
@@ -339,7 +340,7 @@ exports.createCourse = async (req, res) => {
           about_instructor,
           category: category,
           overview: overview,
-          rating : 0
+          rating: 0,
         })
         .$returningId();
       return res.status(200).json({
@@ -354,7 +355,6 @@ exports.createCourse = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log(error);
     return res.status(500).json({
       isSuccess: false,
       message: error.message,
@@ -429,19 +429,19 @@ exports.createLesson = async (req, res) => {
       });
     }
     //Validation
-    // const parsedData = lessonSchema.safeParse({
-    //   moduleID,
-    //   lesson_title,
-    //   video_url: lesson_content[0].path,
-    // });
+    const parsedData = lessonSchema.safeParse({
+      moduleID,
+      lesson_title,
+      video_url: lesson_content[0].path,
+    });
 
-    // if (!parsedData.success) {
-    //   return res.status(400).json({
-    //     isSuccess: false,
-    //     message: "Validation failed.",
-    //     errors: parsedData.error.errors,
-    //   });
-    // }
+    if (!parsedData.success) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: "Validation failed.",
+        errors: parsedData.error.errors,
+      });
+    }
 
     if (!lesson_content || !lesson_content[0]?.path) {
       return res.status(400).json({
@@ -449,7 +449,6 @@ exports.createLesson = async (req, res) => {
         message: "Lesson content file is missing.",
       });
     }
-    console.log(lesson_content[0].path);
 
     try {
       await new Promise((resolve, reject) => {
@@ -483,8 +482,6 @@ exports.createLesson = async (req, res) => {
     let lessonduration = "";
     try {
       lessonduration = await getVideoDurationInSeconds(secureLessonUrl);
-      console.log(`Lesson duration in seconds: ${lessonduration}`);
-      // Use lessonduration here (e.g., save it to the database or log it)
     } catch (error) {
       console.error("Error getting video duration:", error);
     }
@@ -526,7 +523,7 @@ exports.getAllModules = async (req, res) => {
       .orderBy(modules.createdAt, "desc");
 
     if (!modules || modules.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "modules not found!",
       });
@@ -565,7 +562,7 @@ exports.getAllLessons = async (req, res) => {
 
     // If no lessons are found
     if (!fetchedLessonsWithModule || fetchedLessonsWithModule.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "No lessons found for the specified module.",
       });
@@ -587,7 +584,6 @@ exports.getAllLessons = async (req, res) => {
       lessonsByModule[module_id].lessons.push(item.lessons);
     });
 
-    // Send successful response with fetched lessons
     return res.status(200).json({
       isSuccess: true,
 
@@ -601,15 +597,6 @@ exports.getAllLessons = async (req, res) => {
     });
   }
 };
-
-// INNER JOIN only returns rows where there is a matching relationship between the lessons, modules, and allcourses tables.
-// In this context, you want lessons that are associated with a specific module and course. If there is no corresponding relationship between these tables, there is no reason to include the lesson in the result.
-// Filters Out Missing Data:
-
-// If a lesson exists but is not linked to a module or a module is not linked to a course, these entries are likely invalid for your application logic. Using INNER JOIN filters out such invalid data.
-// Cleaner Results:
-
-// Since you need lessons that belong to a specific course and module, INNER JOIN ensures the result set only includes data where all three relationships (lesson -> module -> course) exist.
 
 exports.removeCreatedLesson = async (req, res) => {
   try {
@@ -627,7 +614,7 @@ exports.removeCreatedLesson = async (req, res) => {
       );
     if (lesson.length === 0) {
       return res
-        .status(404)
+        .status(400)
         .json({ isSuccess: false, message: "Lesson not found." });
     }
 
@@ -697,12 +684,9 @@ exports.setLessonCompleted = async (req, res) => {
         )
       )
       .limit(1);
-    // console.log(existingRecord);
     let completedLESSONS = existingRecord.length
       ? JSON.parse(existingRecord[0].completedLessons)
       : [];
-    // console.log(completedLESSONS);
-    // Check if the lessonID exists in the completed_lessons array
     const lessonExists = completedLESSONS.includes(lessonID);
 
     if (lessonExists) {
@@ -715,7 +699,6 @@ exports.setLessonCompleted = async (req, res) => {
     // Add the lesson ID to the completed lessons array (avoid duplicates)
     if (!lessonExists) {
       completedLESSONS.push(lessonID);
-      console.log(completedLESSONS);
       if (existingRecord.length > 0) {
         await db
           .update(completed_lessons)
@@ -746,7 +729,6 @@ exports.setLessonCompleted = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log(error);
     return res.status(500).json({
       isSuccess: false,
       message: error.message,
@@ -771,12 +753,9 @@ exports.getAllCompletedLessons = async (req, res) => {
     let completedLESSONS = existingRecord.length
       ? JSON.parse(existingRecord[0].completedLessons)
       : [];
-    // JSON.parse(existingRecord[0].completedLessons) converts the completedLessons string (which is a JSON array) into an actual JavaScript array.
-    // console.log("length", completedLESSONS.length);
-    // Check if the lessonID exists in the completed_lessons array
-    // console.log(completedLESSONS.length);
+
     if (completedLESSONS.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "There is no completed lessons",
       });
@@ -802,7 +781,7 @@ exports.removeCreatedCourse = async (req, res) => {
       .from(allcourses)
       .where(eq(allcourses.course_id, courseID));
     if (existedCourse.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "Course not found",
       });
@@ -823,6 +802,13 @@ exports.removeCreatedCourse = async (req, res) => {
       instructorImage.lastIndexOf("/") + 1,
       instructorImage.lastIndexOf(".")
     );
+    if (!deleteURL || !deleteImageURL || !instructorImageUrl) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: "Missing media URLs.",
+      });
+    }
+
     if (deleteURL && deleteImageURL) {
       try {
         const deletePromises = [
@@ -885,10 +871,25 @@ exports.removeCreatedCourse = async (req, res) => {
           }),
         ];
         await Promise.all(deletePromises);
-
-        await db
-          .delete(allcourses)
-          .where(eq(allcourses.course_id, existedCourse[0].course_id));
+        await db.transaction(async (trx) => {
+          await trx
+            .delete(allcourses)
+            .where(eq(allcourses.course_id, courseID));
+          await trx
+            .delete(user_Courses)
+            .where(eq(user_Courses.course_id, courseID));
+          await trx.delete(tests).where(eq(tests.courseID, courseID));
+          await trx.delete(modules).where(eq(modules.courseID, courseID));
+          await trx
+            .delete(course_reviews)
+            .where(eq(course_reviews.course_id, courseID));
+          await trx
+            .delete(completed_lessons)
+            .where(eq(completed_lessons.course_id, courseID));
+          await tsx
+            .delete(test_status)
+            .where(eq(test_status.courseID, courseID));
+        });
 
         return res.status(200).json({
           isSuccess: true,

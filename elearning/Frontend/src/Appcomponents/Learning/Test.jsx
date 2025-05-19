@@ -8,13 +8,12 @@ import {
 import { toast } from "sonner";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useSelector, useDispatch } from "react-redux";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, LoaderCircle } from "lucide-react";
 import { startTest, stopTest, setTimeLeft } from "../../store/Slices/testSlice";
 import { Button } from "@/components/ui/button";
-import { LoaderCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const Test = ({ Quiz, user, ID, progress, courseID }) => {
+const Test = ({ Quiz, user, ID, progress, courseID, attemptCount }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [questions, setQuestions] = useState([]);
@@ -23,14 +22,12 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
   const [reviewed, setReviewed] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [certificate, setCertificate] = useState("");
   const [remainingAttempts, setRemainingAttempts] = useState(0);
   const { testStarted, timeLeft, startTime } = useSelector(
     (state) => state.test
   );
-
-  console.log("rendered!");
 
   const fetchQuestions = useCallback(async () => {
     if (!ID) return;
@@ -63,6 +60,7 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
     } else if (testStarted && timeLeft === 0 && !submitted) {
       toast.warning("Time is up! Auto-submitting your test...");
       handleSubmit();
+      setSubmitted(true);
     }
   }, [testStarted, timeLeft, submitted, dispatch, startTime]); //
 
@@ -113,21 +111,21 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
     try {
       const payload = {
         userID: user,
+        courseID: courseID,
         testID: ID,
         answers: formattedAnswers,
       };
-      console.log(payload);
-      const response = await SubmitTestAnswers(payload);
 
+      const response = await SubmitTestAnswers(payload);
       if (response.success) {
         setScore(response.score);
         setRemainingAttempts(response.remainingAttempts);
-        toast.success("Test Submitted!");
+        toast.success(response.message);
         setSubmitted(true);
         setAnswers({});
         dispatch(stopTest());
       }
-      setLoading(true);
+
       if (response.score >= 70) {
         const certiPayload = {
           userID: user,
@@ -138,9 +136,11 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
         toast.success(certiResponse.message);
         setCertificate(certiResponse.certificate_url);
       }
-      setLoading(false);
     } catch (error) {
-      console.error("Error submitting answers:", error);
+      console.log(error);
+      toast.error("Failed to submit test");
+    } finally {
+      setLoading(false); // Ensure loading is always turned off
     }
   };
 
@@ -167,7 +167,7 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
                     <h2 className="text-lg">
                       <span className="font-bold">
                         (Q{currentQuestionIndex + 1})
-                      </span>{" "}
+                      </span>
                       {currentQuestion.question_text}
                     </h2>
                     <span className="text-gray-500">
@@ -288,7 +288,7 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
 
             <div className="grid grid-cols-5 gap-2 my-2 py-4 w-[90%] mx-auto">
               {questions.map((q, idx) => (
-                <div className="flex flex-col">
+                <div className="flex flex-col" key={idx}>
                   {currentQuestionIndex === idx && (
                     <div className="bg-customGreen h-[5px] rounded-t-lg"></div>
                   )}
@@ -328,6 +328,38 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
                     Congratulations! You've passed the test. Certificate of
                     Completion will be generated.
                   </p>
+                  <div className="py-2">
+                    {certificate ? (
+                      <>
+                        <a
+                          href={certificate}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-white w-full"
+                        >
+                          <Button type="submit" disabled={loading}>
+                            {loading ? (
+                              <>
+                                <LoaderCircle className="animate-spin" />
+                                Generating Certificate
+                              </>
+                            ) : (
+                              "View Certificate"
+                            )}
+                          </Button>
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <Button type="submit" disabled={loading}>
+                          <>
+                            <LoaderCircle className="animate-spin" />
+                            Generating Certificate
+                          </>
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </>
               ) : (
                 <h2 className="font-semibold my-4">
@@ -338,56 +370,38 @@ const Test = ({ Quiz, user, ID, progress, courseID }) => {
               <p className="font-bold my-4 text-base">
                 Remaining Attempts: {remainingAttempts}
               </p>
-              {certificate && (
-                <>
-                  <a
-                    href={certificate}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white w-full"
-                  >
-                    <Button type="submit" disabled={loading}>
-                      {loading ? (
-                        <>
-                          <LoaderCircle className="animate-spin" />
-                          Generating Certificate
-                        </>
-                      ) : (
-                        "View Certificate"
-                      )}
-                    </Button>
-                  </a>
-                </>
-              )}
+              {remainingAttempts <= 0 && <></>}
             </div>
           ) : progress >= 100.0 ? (
             <div className="flex flex-col items-center justify-center text-center gap-2">
               <p className="text-lg">
-                You'll be answering{" "}
+                You'll be answering
                 <span className="font-bold">{questions.length}</span> questions
                 in this Test.
               </p>
               <p className="text-lg">
-                To pass and earn a certification, you need at least{" "}
+                To pass and earn a certification, you need at least
                 <span className="font-bold">70%</span>. Stay focused—good luck!
               </p>
               <div className="flex flex-row justify-between p-4 border-2 border-gray-200 rounded-lg mb-4 gap-2">
                 <CircleAlert className="w-6 h-6 flex-shrink-0 text-red-500" />
                 <p className="text-sm">
-                  {" "}
-                  This test has a time limit of{" "}
-                  <span className="font-bold">{Math.floor(timeLeft)}</span>{" "}
+                  This test has a time limit of
+                  <span className="font-bold">{Math.floor(timeLeft)}</span>
                   minutes. If time runs out, your answers will be automatically
                   submitted. Make sure to manage your time wisely!
                 </p>
               </div>
               <button
-                className="px-4 py-2 bg-customGreen text-white rounded-lg w-[300px] hover:bg-green-900"
-                onClick={() => {
-                  handleStartTest();
-                }}
+                className={`px-4 py-2 text-white rounded-lg w-[300px] ${
+                  attemptCount >= 3
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-customGreen hover:bg-green-900"
+                }`}
+                onClick={handleStartTest}
+                disabled={attemptCount >= 3}
               >
-                Start Test
+                {attemptCount >= 3 ? "Attempt Limit Reached" : "Start Test"}
               </button>
             </div>
           ) : (

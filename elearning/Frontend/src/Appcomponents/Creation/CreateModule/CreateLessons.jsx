@@ -37,6 +37,7 @@ import QuizForm from "./QuizForm";
 import TestForm from "./TestForm";
 import CreateQuestions from "./CreateQuestions";
 import QuestionPreview from "./QuestionPreview";
+import { useTranslation } from "react-i18next";
 
 const CreateLessons = () => {
   const { user } = useSelector((state) => state.user);
@@ -52,9 +53,8 @@ const CreateLessons = () => {
   const [lesson, setLesson] = useState({});
   const [isDraftDialogOpen, setIsDraftDialogOpen] = useState(false);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
-  const [test, setTest] = useState({});
+  const [test, setTest] = useState();
 
-  console.log(lessonsByModule);
   // Fetch all modules for the course
   const getModules = async (courseID) => {
     try {
@@ -71,7 +71,7 @@ const CreateLessons = () => {
     try {
       const response = await GetTest(courseID);
       if (response.success) {
-        setTest(response.finalTest[0]);
+        setTest(response.finalTest);
       }
     } catch (error) {
       toast.error(error.message);
@@ -102,13 +102,6 @@ const CreateLessons = () => {
   const handleLessonURLSet = (url) => {
     setLessonURL(url); // Update the lesson URL in the parent component
   };
-
-  const formattedLessons = useMemo(() => {
-    return createdmodule.map((module) => ({
-      moduleName: module.name,
-      lessons: lessonsByModule[module.module_id] || [],
-    }));
-  }, [createdmodule, lessonsByModule]);
 
   const getLessonsForModule = async (moduleID) => {
     try {
@@ -205,10 +198,10 @@ const CreateLessons = () => {
   const saveAsDraft = async (userID, courseID) => {
     try {
       const response = await saveDraft(userID, courseID);
-      console.log(response);
+
       if (response.isSuccess) {
         toast.success(response.message);
-        navigate("/admin/course_management");
+        navigate("/admin/course_management", { replace: true });
       } else {
         toast.error(response.message);
       }
@@ -222,7 +215,7 @@ const CreateLessons = () => {
       const response = await saveAsComplete(userID, courseID);
       if (response.isSuccess) {
         toast.success(response.message);
-        navigate("/admin/course_management");
+        navigate("/admin/course_management", { replace: true });
       } else {
         toast.error(response.message);
       }
@@ -231,9 +224,21 @@ const CreateLessons = () => {
     }
   };
 
-  console.log(lessonURL);
-  console.log(lesson);
+  const { t } = useTranslation();
 
+  const {
+    create_new,
+    add_new_lesson,
+    add_new_module,
+    add_new_quiz,
+    add_test,
+    save_draft,
+    sure,
+    action,
+    Cancel,
+    Confirm,
+    Save_as_Complete,
+  } = t("create_lessons", { returnObjects: true });
   return (
     <AdminSide>
       <div className="flex flex-col lg:flex-row my-8 lg:max-w-5xl xl:max-w-7xl mx-auto gap-4 h-[550px] xl:h-[670px]">
@@ -242,7 +247,7 @@ const CreateLessons = () => {
           <div className="w-[90%] lg:w-[60%] mx-auto lg:mx-0 mt-10">
             <div className="flex flex-row justify-between">
               <h1 className="text-xl mx-auto mb-8 px-8">
-                Lesson Title:{" "}
+                Lesson Title:
                 <span className="font-bold">{lesson.lesson_title}</span>
               </h1>
             </div>
@@ -277,9 +282,7 @@ const CreateLessons = () => {
         ) : (
           // Else, render the fallback content
           <div className="w-[90%] lg:w-[50%] mx-auto lg:mx-0 flex flex-col items-center justify-center gap-20">
-            <p className="text-xl font-bold text-center">
-              Create new lessons for each module
-            </p>
+            <p className="text-xl font-bold text-center">{create_new}</p>
             <DotLottieReact
               src="https://lottie.host/4229eb90-987f-45df-ad1a-5e4751774ca9/3sJXHkTuCY.lottie"
               loop
@@ -381,7 +384,7 @@ const CreateLessons = () => {
                           >
                             <Button className="w-[300px]">
                               <PlusCircle />
-                              Add New Lesson{" "}
+                              {add_new_lesson}
                             </Button>
                           </LessonsForm>
                         </div>
@@ -398,7 +401,7 @@ const CreateLessons = () => {
                           >
                             <Button variant="outline" className="w-[300px]">
                               <PlusCircle />
-                              Add New Quiz
+                              {add_new_quiz}
                             </Button>
                           </QuizForm>
                         </div>
@@ -414,7 +417,7 @@ const CreateLessons = () => {
               <ModuleForm courseID={courseID} getModules={getModules}>
                 <div className="flex flex-row font-bold gap-2">
                   <PlusCircle />
-                  Add New Module
+                  {add_new_module}
                 </div>
               </ModuleForm>
             </div>
@@ -443,7 +446,7 @@ const CreateLessons = () => {
                 >
                   <Button className="w-[300px] text-base">
                     <PlusCircle />
-                    Add Final Test
+                    {add_test}
                   </Button>
                 </TestForm>
               </div>
@@ -460,28 +463,24 @@ const CreateLessons = () => {
               >
                 <AlertDialogTrigger asChild>
                   <Button className="bg-transparent hover:bg-gray-200 text-black border border-black">
-                    Save as draft course
+                    {save_draft}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action will save the course as a draft and it will
-                      not show to the user. If confirm , we will redirect you
-                      back to course management mmsp
-                    </AlertDialogDescription>
+                    <AlertDialogTitle>{sure}</AlertDialogTitle>
+                    <AlertDialogDescription>{action}</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel
                       onClick={() => setIsDraftDialogOpen(false)}
                     >
-                      Cancel
+                      {Cancel}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => saveAsDraft(user.user_id, courseID)}
                     >
-                      Confirm
+                      {Confirm}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -493,29 +492,24 @@ const CreateLessons = () => {
               >
                 <AlertDialogTrigger asChild>
                   {Object.keys(lessonsByModule).length > 0 &&
-                    lessonsByModule[Object.keys(lessonsByModule)[0]].length > 0 && (
-                      <Button>Save as Complete</Button>
-                    )}
+                    lessonsByModule[Object.keys(lessonsByModule)[0]].length >
+                      0 && <Button>{Save_as_Complete}</Button>}
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action will save the course as complete and it will
-                      show to the user. If confirm , we will redirect you back
-                      to course management
-                    </AlertDialogDescription>
+                    <AlertDialogTitle>{sure}</AlertDialogTitle>
+                    <AlertDialogDescription>{action}</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel
                       onClick={() => setIsCompleteDialogOpen(false)}
                     >
-                      Cancel
+                      {Cancel}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => saveAsCompleted(user.user_id, courseID)}
                     >
-                      Confirm
+                      {Confirm}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -529,3 +523,10 @@ const CreateLessons = () => {
 };
 
 export default CreateLessons;
+
+// const formattedLessons = useMemo(() => {
+//   return createdmodule.map((module) => ({
+//     moduleName: module.name,
+//     lessons: lessonsByModule[module.module_id] || [],
+//   }));
+// }, [createdmodule, lessonsByModule]);

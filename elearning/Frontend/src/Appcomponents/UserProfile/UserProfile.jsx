@@ -6,27 +6,26 @@ import EnrolledCourses from "../Courses/EnrolledCourses";
 import Certificates from "./Certificates";
 import GradeTable from "./GradeTable";
 import { Link } from "react-router-dom";
-import { User, Bell } from "lucide-react";
+import { User } from "lucide-react";
+import { GetCertificate } from "@/EndPoints/user";
 
-import { GetEnrolledCourses, GetReports } from "@/EndPoints/user";
+import { GetEnrolledCourses } from "@/EndPoints/user";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { useManageUser } from "@/hooks/useManageUser";
 
 const UserProfile = () => {
   const { user } = useSelector((state) => state.user);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
-  const [reports, setReports] = useState([]);
+  const [certificate, setCertificate] = useState([]);
+  const [saved_coursesCount, setSaved_courseCount] = useState(0);
 
-  // Derived unread count
-  const unreadCount = reports.filter((report) => !report.is_read).length;
-
-  const fetchReports = async () => {
+  const getCertificate = async () => {
     try {
-      const response = await GetReports();
-      if (response.success) {
-        setReports(response.reports);
-      }
+      const response = await GetCertificate(user.user_id);
+      setCertificate(response.certificates || []); // Ensure it's always an array
     } catch (error) {
-      toast.error("Error fetching reports");
+      setCertificate([]);
     }
   };
 
@@ -36,6 +35,8 @@ const UserProfile = () => {
 
       if (response.isSuccess) {
         setEnrolledCourses(response.enrolledCourses);
+
+        setSaved_courseCount(response.savedCourseCount);
       } else {
         toast.error(response.message);
       }
@@ -44,10 +45,16 @@ const UserProfile = () => {
     }
   };
   useEffect(() => {
-    fetchReports();
     DisplayCourses();
-  }, []);
+    getCertificate();
+  }, [user.user_id]);
 
+  const { t } = useTranslation();
+
+  const { Edit_profile, enrolled_courses, certificates, saved_courses } = t(
+    "userprofile",
+    { returnObjects: true }
+  );
   return (
     <>
       {/* Profile Part */}
@@ -80,21 +87,8 @@ const UserProfile = () => {
               </div>
 
               <div className="flex flex-row items-center justify-center gap-3">
-                <Link to="/user/editProfile">
-                  <Button variant="outline">Edit Profile</Button>
-                </Link>
-                <Link
-                  to="/user/reports"
-                  state={{ reports }} // Pass data via state
-                >
-                  <div className="relative">
-                    <Bell className="w-6 h-6 text-gray-600" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </div>
+                <Link to="/user/editProfile" replace>
+                  <Button variant="outline">{Edit_profile}</Button>
                 </Link>
               </div>
             </div>
@@ -105,19 +99,22 @@ const UserProfile = () => {
             <div className="flex lg:flex-col gap-2 w-[70%] md:w-full mx-auto">
               <div className="w-[200px] h-[40px] bg-pale py-2 rounded-xl">
                 <p className="text-center text-[14px] text-black ">
-                  Enrolled Courses: <span>{enrolledCourses.length}</span>
+                  {enrolled_courses}
+                  <span>{enrolledCourses ? enrolledCourses.length : "0"}</span>
                 </p>
               </div>
 
               <div className="w-[200px] h-[40px] bg-customGreen py-2 rounded-xl">
                 <p className="text-center text-[14px] text-white">
-                  Certificates: 0
+                  {certificates}
+                  <span>{certificate ? certificate.length : "0"}</span>
                 </p>
               </div>
 
               <div className="w-[200px] h-[40px] bg-black py-2 rounded-xl">
                 <p className="text-center text-[14px] text-white">
-                  Saved Courses: 0
+                  {saved_courses}
+                  <span>{saved_coursesCount ? saved_coursesCount : "0"}</span>
                 </p>
               </div>
             </div>
@@ -126,11 +123,9 @@ const UserProfile = () => {
 
         <hr className=" h-1 mx-auto my-4 bg-black border-0 rounded md:my-10 dark:bg-gray-700" />
 
-        <div>
-          <EnrolledCourses enrolledCourses={enrolledCourses} />
-        </div>
+        <EnrolledCourses enrolledCourses={enrolledCourses} />
 
-        <Certificates userId={user.user_id} />
+        <Certificates certificate={certificate} />
 
         <GradeTable userId={user.user_id} />
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -11,8 +11,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Ellipsis, PlusIcon, Trash } from "lucide-react";
-import UserEnrolledcourse from "./UserEnrolledcourse";
+import { PlusIcon, Trash } from "lucide-react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,12 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Accountremove,
-  Unrestrict_user,
-  userrestriction,
-} from "@/EndPoints/user";
-import { toast } from "sonner";
+
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -41,9 +36,11 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import Report from "./Report";
+import { useManageUser } from "@/hooks/useManageUser";
 
-
-const Usermanagement = ({ users, setUsers }) => {
+const Usermanagement = () => {
+  const { users, restrictUser, unrestrictUser, removeUser, isLoading } =
+    useManageUser();
   const { t } = useTranslation();
   const { Text, Header, Buttons, Role, Description } = t("UserTab", {
     returnObjects: true,
@@ -51,65 +48,6 @@ const Usermanagement = ({ users, setUsers }) => {
   const [dataperpage, setDataperpage] = useState(8);
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
-  const restrictUser = async (userid) => {
-    try {
-      const response = await userrestriction(userid);
-      if (response.isSuccess) {
-        toast.info(response.message);
-        setUsers((prevUsers) =>
-          prevUsers.map((user) =>
-            user.user_id === userid
-              ? {
-                  ...user,
-                  status: user.status === "active" ? "restricted" : "active",
-                }
-              : user
-          )
-        );
-      }
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-  const removeUser = async (userid) => {
-    try {
-      const response = await Accountremove(userid);
-      if (response.isSuccess) {
-        toast.info(response.message);
-        setUsers((prevUsers) =>
-          prevUsers.filter((user) => user.user_id !== userid)
-        );
-      }
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-
-  const unrestrictUser = async (userid) => {
-    try {
-      const response = await Unrestrict_user(userid);
-      if (response.isSuccess) {
-        toast.info(response.message);
-        setUsers((prevUsers) =>
-          prevUsers.map((user) =>
-            user.user_id === userid
-              ? {
-                  ...user,
-                  status:
-                    user.status === "restricted" ? "active" : "restricted",
-                }
-              : user
-          )
-        );
-      }
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-  }
 
   const indexofLastUser = currentPage * dataperpage;
   const fistIndexUser = indexofLastUser - dataperpage;
@@ -123,14 +61,12 @@ const Usermanagement = ({ users, setUsers }) => {
       setCurrentPage(pageNumber);
     }
   };
-  useEffect(() => {}, [users]);
+
   return (
     <div className="p-3 my-6">
       <div className="flex  justify-between mb-5">
-        <p className="font-bold text-xl">
-          {Text.Total} - {users.length}
-        </p>
-        <Button onClick={() => navigate(`/admin/register`)}>
+        <p className="font-bold text-xl">Total- {users?.length}</p>
+        <Button onClick={() => navigate(`/admin/register`, { replace: true })}>
           <PlusIcon />
           {Text.AddUser}
         </Button>
@@ -139,9 +75,13 @@ const Usermanagement = ({ users, setUsers }) => {
         <TableCaption> {Description.Des4}</TableCaption>
         <TableHeader className="bg-pale">
           <TableRow>
-            <TableHead className="w-[300px]">{Header.Username}</TableHead>
-            <TableHead className="w-[300px]">{Header.Profile}</TableHead>
-            <TableHead className="w-[300px]">{Header.Role}</TableHead>
+            <TableHead className="w-[130px]">{Header.Username}</TableHead>
+            <TableHead className="w-[150px] text-center">
+              {Header.Profile}
+            </TableHead>
+            <TableHead className="w-[150px] text-center">
+              {Header.Role}
+            </TableHead>
             <TableHead className="text-center w-[10px]">
               {Header.Action}
             </TableHead>
@@ -156,7 +96,7 @@ const Usermanagement = ({ users, setUsers }) => {
               <TableRow key={u.user_id} className="bg-pale/10">
                 <TableCell>{u.user_name}</TableCell>
 
-                <TableCell>
+                <TableCell className="flex items-center justify-center">
                   <Avatar>
                     <AvatarImage src={u.user_profileImage} />
                     <AvatarFallback className="font-bold">
@@ -166,11 +106,12 @@ const Usermanagement = ({ users, setUsers }) => {
                     </AvatarFallback>
                   </Avatar>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <span
                     className={cn(
-                      "p-1 px-2 rounded-lg w-fit  font-bold text-white",
-                      u.role === "superadmin" ? " bg-customGreen " : "bg-black "
+                      "p-1 px-2 rounded-lg w-fit  font-bold text-white bg-black",
+                      u.role === "superadmin" && " bg-customGreen",
+                      u.role === "admin" && "bg-blue-500"
                     )}
                   >
                     {/* {u.role} */}
@@ -180,59 +121,72 @@ const Usermanagement = ({ users, setUsers }) => {
                   </span>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-row gap-2">
-                  {/* Restrict Unrestrict User */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <p className="flex items-center gap-4 justify-center">
-                        <Button>
-                          {u.status === "active" && `${Buttons.Restrict}`}
-                          {u.status === "restricted" && `${Buttons.Unrestrict}`}
+                  {u.role !== "superadmin" && (
+                    <div className="flex flex-row gap-2 items-center justify-center">
+                      {/* Restrict Unrestrict User */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <p className="flex items-center gap-4 justify-center">
+                            <Button disabled={isLoading}>
+                              {u.status === "active" && `${Buttons.Restrict}`}
+                              {u.status === "restricted" &&
+                                `${Buttons.Unrestrict}`}
+                            </Button>
+                          </p>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {Description.Des1}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {Description.Des2}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>
+                              {Buttons.Cancel}
+                            </AlertDialogCancel>
+                            {u.status === "active" && (
+                              <AlertDialogAction
+                                onClick={() => restrictUser(u.user_id)}
+                              >
+                                {Buttons.Confirm}
+                              </AlertDialogAction>
+                            )}
+                            {u.status === "restricted" && (
+                              <AlertDialogAction
+                                onClick={() => unrestrictUser(u.user_id)}
+                              >
+                                {Buttons.Confirm}
+                              </AlertDialogAction>
+                            )}
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      {/* User Report */}
+                      <Report reportUser={u.user_id}>
+                        <Button
+                          variant="secondary"
+                          className="border border-gray-400"
+                        >
+                          Send Report
                         </Button>
-                      </p>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{Description.Des1}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {Description.Des2}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{Buttons.Cancel}</AlertDialogCancel>
-                        {u.status === "active" && (
-                          <AlertDialogAction
-                            onClick={() => restrictUser(u.user_id)}
-                          >
-                            {Buttons.Confirm}
-                          </AlertDialogAction>
-                        )}
-                        {u.status === "restricted" && (
-                          <AlertDialogAction
-                            onClick={() => unrestrictUser(u.user_id)}
-                          >
-                            {Buttons.Confirm}
-                          </AlertDialogAction>
-                        )}
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  {/* User Report */}
-                  <Report reportUser={u.user_id}>
-                    <Button variant="secondary">Send Report</Button>
-                  </Report>
-                  </div>
-
+                      </Report>
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <p className="flex items-center gap-4 justify-center">
-                        <Trash
-                          className="cursor-pointer text-red-600 hover:text-red-300"
-                          size={24}
-                        />
-                      </p>
+                      {u.role !== "superadmin" && (
+                        <p className="flex items-center gap-4 justify-center">
+                          <Trash
+                            className="cursor-pointer text-red-600 hover:text-red-300"
+                            size={24}
+                          />
+                        </p>
+                      )}
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>

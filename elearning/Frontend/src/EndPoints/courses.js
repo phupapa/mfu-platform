@@ -33,10 +33,18 @@ export const getAllLessons = async (courseID, moduleID) => {
 export const get_PopularCourses = async () => {
   try {
     const response = await axiosInstance.get("/get_PopularCourses");
-    //     console.log(response);
-    return response.data;
+
+    if (
+      !response?.data?.Popularcourses ||
+      !Array.isArray(response.data.Popularcourses)
+    ) {
+      throw new Error("Popular courses data is missing or invalid.");
+    }
+    console.log(response);
+
+    return response.data.Popularcourses;
   } catch (err) {
-    return err.response.data;
+    throw new Error(err?.response.data?.message);
   }
 };
 
@@ -111,22 +119,19 @@ export const setLessonCompleted = async (courseID, userID, lessonID) => {
     const response = await axiosInstance.post(
       `/setCompleted/${courseID}/${userID}/${lessonID}`
     );
-    // console.log(response);
+    console.log(response);
     return response.data;
   } catch (err) {
     return err.response.data;
   }
 };
-// router.get(
-//   "/getAllCompleted/:courseID/:userID",
-//   courseController.getAllCompletedLessons
-// );
 
 export const getcompletedLessons = async (courseID, userID) => {
   try {
     const response = await axiosInstance.get(
       `/getAllCompleted/${courseID}/${userID}`
     );
+    console.log(response);
 
     return response.data;
   } catch (err) {
@@ -220,12 +225,17 @@ export const CourseDetails = async (courseID) => {
   }
 };
 
-export const RemoveEnrolleduser = async (userID) => {
+export const RemoveEnrolleduser = async (userID, courseid) => {
+  console.log(courseid);
   try {
-    const response = await axiosInstance.post(`/removeuser/${userID}`);
+    const response = await axiosInstance.post(
+      `/removeuser/${userID}/${courseid}`
+    );
 
     return response.data;
   } catch (err) {
+    console.log(err);
     return err.response.data;
   }
 };
+//

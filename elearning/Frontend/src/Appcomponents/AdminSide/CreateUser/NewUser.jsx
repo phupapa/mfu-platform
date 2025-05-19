@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import TextField from "@mui/material/TextField";
 
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { registerUser } from "@/EndPoints/auth";
-import { registerSchema } from "@/types/registerSchema";
+import { adminSchema, registerSchema } from "@/types/registerSchema";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -27,30 +27,50 @@ import {
 import { ArrowLeft } from "lucide-react";
 
 const RegisterNewUser = () => {
+  const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("");
   const navigate = useNavigate();
+
+  const validationSchema =
+    selectedRole === "admin" ? adminSchema : registerSchema;
   const form = useForm({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(validationSchema),
     defaultValues: {
       username: "",
       password: "",
       role: "",
+      email: "", // Optional, only required for admin
+      token: "", // Optional, only required for admin
     },
   });
-  const [loading, setLoading] = useState(false);
+
   const Register_Onsubmit = async (values) => {
     try {
       setLoading(true);
       console.log(values);
       const response = await registerUser(values);
       if (!response.isSuccess) {
-        form.reset();
+        form.reset({
+          username: "",
+          password: "",
+          role: "",
+          email: "", // Optional, only required for admin
+          token: "", // Optional, only required for admin
+        });
+        setSelectedRole("");
         toast.error(response.message);
-
         setLoading(false);
       } else {
         toast.success(response.message);
-        form.reset();
-        navigate("/admin/users_management");
+        form.reset({
+          username: "",
+          password: "",
+          role: "",
+          email: "", // Optional, only required for admin
+          token: "", // Optional, only required for admin
+        });
+
+        navigate("/admin/users_management", { replace: true });
         setLoading(false);
       }
     } catch (error) {
@@ -58,12 +78,29 @@ const RegisterNewUser = () => {
       setLoading(false);
     }
   };
+  const handleRoleChange = useCallback(
+    (value) => {
+      setSelectedRole(value);
+      form.setValue("role", value); // Sync with form state
+    },
+    [form]
+  );
 
   return (
     <AdminSide>
-      <div className="max-w-5xl mx-auto">
+      <div className="md:max-w-5xl w-[95%]  mx-auto p-5 border border-gray-200 shadow-md mt-10 rounded-lg">
         <div className="flex items-end justify-between max-w-5xl ">
-          <p className="mt-10 ml-3 font-bold text-xl">Register a new user</p>
+          <div className="ml-3 flex flex-col gap-3">
+            <p className="mt-3 font-bold text-xl">
+              {selectedRole === "admin"
+                ? "Register a new admin"
+                : "Register a new user"}
+            </p>
+            <p className="text-gray-400 text-sm">
+              Hint : For creating a new admin , please select admin role
+              first!!!
+            </p>
+          </div>
           <ArrowLeft
             className="cursor-pointer"
             onClick={() => navigate("/admin/users_management")}
@@ -84,10 +121,11 @@ const RegisterNewUser = () => {
                       <TextField
                         id="outlined-basic"
                         label="UserName"
-                        placeholder="JhonDoe...."
+                        placeholder="JohnDoe...."
                         {...field}
                         variant="outlined"
                         className="w-full rounded-lg text-md bg-white"
+                        disabled={loading}
                       />
                     </FormControl>
                     <FormMessage />
@@ -95,6 +133,29 @@ const RegisterNewUser = () => {
                 )}
               />
 
+              {selectedRole === "admin" && (
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <TextField
+                          id="outlined-basic"
+                          label="Email"
+                          placeholder="johndoe@gmail.com...."
+                          {...field}
+                          type="text"
+                          variant="outlined"
+                          disabled={loading}
+                          className="w-full rounded-lg text-md  bg-white"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="password"
@@ -107,7 +168,7 @@ const RegisterNewUser = () => {
                         placeholder="******"
                         {...field}
                         type="password"
-                        {...field}
+                        disabled={loading}
                         variant="outlined"
                         className="w-full rounded-lg text-md  bg-white"
                       />
@@ -116,6 +177,30 @@ const RegisterNewUser = () => {
                   </FormItem>
                 )}
               />
+
+              {selectedRole === "admin" && (
+                <FormField
+                  control={form.control}
+                  name="token"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <TextField
+                          id="outlined-basic"
+                          label="Token"
+                          placeholder="******"
+                          {...field}
+                          type="text"
+                          disabled={loading}
+                          variant="outlined"
+                          className="w-full rounded-lg text-md  bg-white"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="role"
@@ -124,14 +209,14 @@ const RegisterNewUser = () => {
                     <FormControl>
                       <Select
                         value={field.value}
-                        onValueChange={field.onChange}
+                        onValueChange={handleRoleChange}
                       >
-                        <SelectTrigger className="w-[280px]">
-                          <SelectValue placeholder="Select Role" />
+                        <SelectTrigger className="w-[200px] p-2">
+                          <SelectValue placeholder={"Select Role"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="user">user</SelectItem>
+                          <SelectItem value="admin">admin</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -147,7 +232,9 @@ const RegisterNewUser = () => {
               )}
               disabled={loading}
             >
-              {!loading ? "Create new user" : "Creating"}
+              {!loading
+                ? `Create new ${selectedRole === "admin" ? "admin" : "user"}`
+                : "Creating"}
             </Button>
           </form>
         </Form>

@@ -69,7 +69,13 @@ const LessonsForm = ({
       setCreating(false);
     }
   };
-
+  const onError = (errors) => {
+    for (const fields in errors) {
+      if (fields === "lesson_content") {
+        setLessonPreview(null);
+      }
+    }
+  };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>{children}</DialogTrigger>
@@ -78,7 +84,7 @@ const LessonsForm = ({
         <DialogHeader>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(handleSubmit)}
+              onSubmit={form.handleSubmit(handleSubmit, onError)}
               className="space-y-8"
             >
               <FormField
@@ -88,7 +94,11 @@ const LessonsForm = ({
                   <FormItem>
                     <FormLabel>Lesson title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Introduction to ..... " {...field} />
+                      <Input
+                        placeholder="Introduction to ..... "
+                        {...field}
+                        disabled={creating}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -122,7 +132,11 @@ const LessonsForm = ({
                           />
                           <Trash
                             size={16}
-                            className="text-red-900 cursor-pointer hover:text-red-700 absolute bottom-1 right-[-20px]"
+                            className={cn(
+                              `text-red-900 cursor-pointer hover:text-red-700 absolute right-[-15px] bottom-0 ${
+                                creating && "cursor-not-allowed  text-red-400"
+                              }`
+                            )}
                             onClick={() => {
                               setLessonPreview(null);
                               form.setValue("lesson_content", null);

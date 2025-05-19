@@ -9,6 +9,7 @@ const {
   tests,
   userReports,
   completed_lessons,
+  savedcourse,
 } = require("../db");
 const db = require("../db/db");
 
@@ -18,7 +19,7 @@ exports.getallusers = async (req, res) => {
   try {
     const allusers = await db.select().from(users);
     if (allusers.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "No user found!!!",
       });
@@ -30,7 +31,7 @@ exports.getallusers = async (req, res) => {
       allusers,
     });
   } catch (error) {
-    return res.status(404).json({
+    return res.status(400).json({
       isSuccess: false,
       message: error.message,
     });
@@ -48,7 +49,7 @@ exports.EnableTwoStep = async (req, res) => {
 
     // Check if the user exists
     if (userDoc.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "User not found. Something went wrong.",
       });
@@ -103,10 +104,45 @@ exports.Enrollment = async (req, res) => {
         message: "Course not found",
       });
     }
+    const existedEnrollment = await db
+      .select()
+      .from(user_Courses)
+      .where(
+        and(
+          eq(user_Courses.user_id, userid),
+          eq(user_Courses.course_id, courseid)
+        )
+      );
+    if (existedEnrollment.length > 0) {
+      await db
+        .delete(user_Courses)
+        .where(
+          and(
+            eq(user_Courses.user_id, userid),
+            eq(user_Courses.course_id, courseid)
+          )
+        );
+    }
+
     await db.insert(user_Courses).values({
       user_id: userid,
       course_id: courseid,
+      progress: 0,
+      is_completed: false,
     });
+
+    //count current enrollments
+    const enrollmentCount = await db
+      .select()
+      .from(user_Courses)
+      .where(eq(user_Courses.course_id, courseid));
+
+    if (enrollmentCount.length >= 5) {
+      await db
+        .update(allcourses)
+        .set({ is_popular: true })
+        .where(eq(allcourses.course_id, courseid));
+    }
 
     return res.status(200).json({
       isSuccess: true,
@@ -163,17 +199,6 @@ exports.CheckEnrolledCourse = async (req, res) => {
       let completedLESSONS = completedLessonsRecord.length
         ? JSON.parse(completedLessonsRecord[0].completedLessons)
         : [];
-      // JSON.parse(existingRecord[0].completedLessons) converts the completedLessons string (which is a JSON array) into an actual JavaScript array.
-      // console.log("length", completedLESSONS.length);
-      // Check if the lessonID exists in the completed_lessons array
-      // console.log(completedLESSONS.length);
-
-      // if (completedLESSONS.length === 0) {
-      //   return res.status(404).json({
-      //     isSuccess: false,
-      //     message: "There is no completed lessons",
-      //   });
-      // }
 
       return res.status(200).json({
         isSuccess: true,
@@ -192,6 +217,24 @@ exports.CheckEnrolledCourse = async (req, res) => {
 exports.CourseToLearn = async (req, res) => {
   const { userid, courseid } = req.params;
   try {
+    // Check enrollment
+    const enrollment = await db
+      .select()
+      .from(user_Courses)
+      .where(
+        and(
+          eq(user_Courses.user_id, userid),
+          eq(user_Courses.course_id, courseid)
+        )
+      );
+
+    if (enrollment.length === 0) {
+      return res.status(403).json({
+        isSuccess: false,
+        message: "You are not enrolled in this course.",
+      });
+    }
+
     const courseData = await db
       .select()
       .from(user_Courses)
@@ -207,7 +250,7 @@ exports.CourseToLearn = async (req, res) => {
       );
 
     if (courseData.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "Course not found",
       });
@@ -270,7 +313,9 @@ exports.CourseToLearn = async (req, res) => {
           createdAt: quiz_createdAt,
         });
       }
-
+      module.lessons.sort(
+        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+      );
       return acc;
     }, []);
 
@@ -317,15 +362,20 @@ exports.getEnrolledCourses = async (req, res) => {
       .where(eq(user_Courses.user_id, userid));
 
     if (enrolledCourses.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "No enrolled courses found",
       });
     }
+    const savedCourse = await db
+      .select()
+      .from(savedcourse)
+      .where(eq(savedcourse.user_id, userid));
 
     return res.status(200).json({
       isSuccess: true,
       enrolledCourses,
+      savedCourseCount: savedCourse ? savedCourse.length : 0,
     });
   } catch (error) {
     return res.status(500).json({
@@ -337,7 +387,7 @@ exports.getEnrolledCourses = async (req, res) => {
 
 exports.restrictUser = async (req, res) => {
   const { userid } = req.params;
-  console.log(userid);
+
   try {
     const user_doc = await db
       .select()
@@ -345,7 +395,7 @@ exports.restrictUser = async (req, res) => {
       .where(eq(users.user_id, userid));
 
     if (user_doc.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "User not found!",
       });
@@ -361,7 +411,6 @@ exports.restrictUser = async (req, res) => {
       message: "Restricted a user!!!",
     });
   } catch (error) {
-    console.log(error);
     return res.status(500).json({
       isSuccess: false,
       message: "An error occurred.",
@@ -379,7 +428,7 @@ exports.UnRestrictUser = async (req, res) => {
       .where(eq(users.user_id, userid));
 
     if (user_doc.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "User not found!",
       });
@@ -404,7 +453,7 @@ exports.UnRestrictUser = async (req, res) => {
 
 exports.removeUser = async (req, res) => {
   const { userid } = req.params;
-  console.log(userid);
+
   try {
     const user_doc = await db
       .select()
@@ -412,7 +461,7 @@ exports.removeUser = async (req, res) => {
       .where(eq(users.user_id, userid));
 
     if (user_doc.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "User not found!",
       });
@@ -450,7 +499,7 @@ exports.allUserEnrollments = async (req, res) => {
       enrolledAt: item.user_courses.enrolled_at,
     }));
     if (enrollments.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "No enrollment found.",
       });
@@ -463,6 +512,7 @@ exports.allUserEnrollments = async (req, res) => {
     return res.status(500).json({
       isSuccess: false,
       message: "An error occurred.",
+      error: error.message,
     });
   }
 };
@@ -470,7 +520,6 @@ exports.allUserEnrollments = async (req, res) => {
 exports.setProgress = async (req, res) => {
   const { courseID, userID } = req.params;
   const { progress } = req.body;
-  console.log("hi", progress);
 
   try {
     // Ensure required parameters are provided
@@ -494,7 +543,7 @@ exports.setProgress = async (req, res) => {
 
     // Check if the course record exists
     if (userCourseRecords.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         isSuccess: false,
         message: "Course record not found.",
       });
@@ -508,6 +557,17 @@ exports.setProgress = async (req, res) => {
         isSuccess: true,
         message: "You have already completed this course.",
       });
+    }
+    if (progress === 100) {
+      await db
+        .update(user_Courses)
+        .set({ is_completed: true })
+        .where(
+          and(
+            eq(user_Courses.user_id, userID),
+            eq(user_Courses.course_id, courseID)
+          )
+        );
     }
 
     // Update progress only if it's less than 100
@@ -545,10 +605,12 @@ exports.getUserReports = async (req, res) => {
       .where({ user_id })
       .orderBy("created_at", "desc");
 
-    return res.status(200).json({success:true, reports});
+    return res.status(200).json({ success: true, reports });
   } catch (error) {
     console.error("Error fetching reports:", error);
-    return res.status(500).json({success:false, error: "Internal Server Error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server Error" });
   }
 };
 
@@ -558,7 +620,9 @@ exports.markReportAsRead = async (req, res) => {
     const user_id = req.userID; // Ensure the user is authenticated
 
     if (!report_id) {
-      return res.status(400).json({ success: false, error: "Report ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Report ID is required" });
     }
 
     // Update the is_read column in the database
@@ -582,6 +646,8 @@ exports.markReportAsRead = async (req, res) => {
     return res.status(200).json({ success: true, reports: updatedReports });
   } catch (error) {
     console.error("Error updating report status:", error);
-    return res.status(500).json({ success: false, error: "Internal Server Error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server Error" });
   }
 };

@@ -1,10 +1,6 @@
-import React, { useEffect, useState } from "react";
 import AdminSide from "../../AdminSide/Admin";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,139 +12,30 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { courseSchema } from "@/types/CourseSchema";
-import { Trash } from "lucide-react";
-import { CreatNewCourse } from "@/EndPoints/courses";
 
-import { toast } from "sonner";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Trash } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import Tiptap from "./Tiptap";
-import { getOldCourse } from "@/EndPoints/drafts";
-import { useSelector } from "react-redux";
+
 import { useTranslation } from "react-i18next";
 
+import { useCourseForm } from "@/hooks/useCreateCourse";
+
 const CourseForm = () => {
-  const { user } = useSelector((state) => state.user);
-  const [searchparams] = useSearchParams();
-  const isEdit = searchparams.get("editID");
-
-  const navigate = useNavigate();
-  const [isloading, setIsloading] = useState(false);
-  const [videoPreview, setVideoPreview] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [profilePreview, setProfilePreview] = useState(null);
-  const form = useForm({
-    resolver: zodResolver(courseSchema),
-    defaultValues: {
-      course_id: isEdit ? "" : "",
-      title: "",
-      description: "",
-      category: "",
-      overview: "",
-      thumbnail: null,
-      courseDemo: null,
-      about_instructor: "",
-      instructor_image: null,
-      instructor_name: "",
-    },
-  });
-  const isCourseExist = async (isEdit, userId) => {
-    if (isEdit) {
-      try {
-        const response = await getOldCourse(isEdit, userId);
-
-        if (response.isSuccess) {
-          form.setValue("course_id", response.course.course_id);
-          form.setValue("title", response.course.course_name);
-          form.setValue("description", response.course.course_description);
-          form.setValue("category", response.course.category);
-          form.setValue("overview", response.course.overview);
-          form.setValue("instructor_name", response.course.instructor_name);
-          form.setValue("about_instructor", response.course.about_instructor);
-          form.setValue("instructor_image", response.course.instructor_image);
-
-          // Reset to null, file inputs cannot be prefilled
-          form.setValue("thumbnail", null); // Do not set the thumbnail value directly (leave it null)
-
-          // Set the preview URL
-          if (response.course.course_image_url) {
-            setImagePreview(response.course.course_image_url); // For the preview
-            form.setValue("thumbnail", response.course.course_image_url);
-          }
-
-          form.setValue("courseDemo", response.course.demo_URL); // You can set the demo URL directly as it's a URL
-
-          if (response.course.demo_URL) {
-            setVideoPreview(response.course.demo_URL);
-          }
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    }
-  };
-  const onSubmit = async (values) => {
-    const formdata = new FormData();
-    console.log(values);
-    if (isEdit) {
-      formdata.append("course_id", values.course_id);
-    }
-    formdata.append("title", values.title);
-    formdata.append("description", values.description);
-    formdata.append("overview", values.overview);
-    formdata.append("category", values.category);
-    formdata.append("thumbnail", values.thumbnail);
-    formdata.append("courseDemo", values.courseDemo);
-    formdata.append("instructor_name", values.instructor_name);
-    formdata.append("about_instructor", values.about_instructor);
-    formdata.append("instructor_image", values.instructor_image);
-    setIsloading(true);
-
-    try {
-      const response = await CreatNewCourse(formdata);
-
-      if (response.isSuccess) {
-        toast.success(response.message);
-
-        let navigateURL;
-        if (isEdit) {
-          const courseID = response.updateCourse;
-          navigateURL = `/admin/course_management/createcourse/${courseID}/createlessons`;
-        } else {
-          const courseID = response.NewCourse[0].course_id;
-          navigateURL = `/admin/course_management/createcourse/${courseID}/createlessons`;
-        }
-        navigate(navigateURL);
-        form.reset();
-
-        setIsloading(false);
-      } else {
-        toast.error(response.message);
-        setIsloading(false);
-      }
-    } catch (error) {
-      toast.error(error.message);
-      form.reset();
-    } finally {
-      setIsloading(false);
-    }
-  };
-  useEffect(() => {
-    if (isEdit) {
-      isCourseExist(isEdit, user.user_id);
-    }
-  }, [form]);
-  useEffect(() => {
-    // Reset previews when the component mounts or if course data is empty
-    if (!isEdit || !imagePreview || !videoPreview || !profilePreview) {
-      setImagePreview(null);
-      setVideoPreview(null);
-      setProfilePreview(null);
-    }
-  }, [isEdit]); // Depend on isEdit or any other state that should reset previews
-
+  const {
+    form,
+    isPending,
+    isEdit,
+    imagePreview,
+    setImagePreview,
+    videoPreview,
+    setVideoPreview,
+    profilePreview,
+    setProfilePreview,
+    onSubmit,
+    onError,
+  } = useCourseForm();
   const { t } = useTranslation();
 
   const {
@@ -165,17 +52,17 @@ const CourseForm = () => {
     Instructor_name,
     instructor,
     Instructor_profile,
-    thumbnail,
+
     About_instructor,
     Enter_about_instructor,
     learning,
     overview,
     Thumbnail,
-    course_thumbnail,
+
     Course_Demo,
     upload,
-    Next,create
   } = t("Form", { returnObjects: true });
+
   return (
     <AdminSide>
       <div className=" my-5 flex flex-col gap-5 w-[60%] md:max-w-5xl  mx-auto ">
@@ -183,11 +70,11 @@ const CourseForm = () => {
           {isEdit ? "Update course" : create_new_course}
         </h1>
         <Form {...form}>
-          <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
+          <form
+            className="space-y-5"
+            onSubmit={form.handleSubmit(onSubmit, onError)}
+          >
             <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2">
-              {/* Course Title */}
-              {/* /// */}
-
               {isEdit && (
                 <FormField
                   control={form.control}
@@ -227,6 +114,7 @@ const CourseForm = () => {
                           placeholder={Enter_course_title}
                           {...field}
                           value={field.value || ""}
+                          disabled={isPending}
                         />
                       </div>
                     </FormControl>
@@ -254,6 +142,7 @@ const CourseForm = () => {
                           placeholder={Enter_Category}
                           {...field}
                           value={field.value || ""}
+                          disabled={isPending}
                         />
                       </div>
                     </FormControl>
@@ -280,6 +169,7 @@ const CourseForm = () => {
                         placeholder={Enter_description}
                         {...field}
                         value={field.value || ""}
+                        disabled={isPending}
                       />
                     </div>
                   </FormControl>
@@ -289,8 +179,7 @@ const CourseForm = () => {
               )}
             />
 
-            {/* for instructor  */}
-            <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2">
+            <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 items-center">
               <FormField
                 control={form.control}
                 name="instructor_name"
@@ -307,6 +196,7 @@ const CourseForm = () => {
                           placeholder={instructor}
                           {...field}
                           value={field.value || ""}
+                          disabled={isPending}
                         />
                       </div>
                     </FormControl>
@@ -330,6 +220,7 @@ const CourseForm = () => {
                             <Input
                               id="instructor_image"
                               type="file"
+                              disabled={isPending}
                               className="cursor-pointer"
                               onChange={(e) => {
                                 const file = e.target.files[0];
@@ -350,16 +241,21 @@ const CourseForm = () => {
                           </div>
                         ) : (
                           <div>
-                            <h3 className="font-bold">Thumbnail Preview:</h3>
+                            <p className="text-md">Instructor profile:</p>
                             <div className="w-fit p-1 relative">
                               <img
                                 src={profilePreview}
-                                alt="Thumbnail Preview"
+                                alt="Instructure image"
                                 className="w-[50px] max-w-sm mt-2 border rounded-full h-[50px]"
                               />
                               <Trash
                                 size={16}
-                                className="text-red-900 cursor-pointer hover:text-red-700 absolute right-[-15px] bottom-0"
+                                className={cn(
+                                  `text-red-900 cursor-pointer hover:text-red-700 absolute right-[-15px] bottom-0 ${
+                                    isPending &&
+                                    "cursor-not-allowed  text-red-400"
+                                  }`
+                                )}
                                 onClick={() => {
                                   setProfilePreview(null); // Clear the image preview
                                   form.setValue("instructor_image", null); // Clear the value in the form state
@@ -387,6 +283,7 @@ const CourseForm = () => {
                   <FormControl>
                     <div className="grid w-full items-center gap-1.5">
                       <Textarea
+                        disabled={isPending}
                         id="about_instructor"
                         placeholder={Enter_about_instructor}
                         {...field}
@@ -394,9 +291,7 @@ const CourseForm = () => {
                       />
                     </div>
                   </FormControl>
-                  <FormDescription>
-                    {This}
-                  </FormDescription>
+                  <FormDescription>{This}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -416,11 +311,10 @@ const CourseForm = () => {
                     <Tiptap
                       value={field.value}
                       onChange={(value) => field.onChange(value)}
+                      disabled={isPending}
                     />
                   </FormControl>
-                  <FormDescription>
-                    {overview}
-                  </FormDescription>
+                  <FormDescription>{overview}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -444,6 +338,7 @@ const CourseForm = () => {
                               id="thumbnail"
                               type="file"
                               className="cursor-pointer"
+                              disabled={isPending}
                               onChange={(e) => {
                                 const file = e.target.files[0];
 
@@ -469,7 +364,12 @@ const CourseForm = () => {
                               />
                               <Trash
                                 size={16}
-                                className="text-red-900 cursor-pointer hover:text-red-700 absolute right-[-15px] bottom-0"
+                                className={cn(
+                                  `text-red-900 cursor-pointer hover:text-red-700 absolute right-[-15px] bottom-0 ${
+                                    isPending &&
+                                    "cursor-not-allowed  text-red-400"
+                                  }`
+                                )}
                                 onClick={() => {
                                   setImagePreview(null); // Clear the image preview
                                   form.setValue("thumbnail", null); // Clear the value in the form state
@@ -479,9 +379,7 @@ const CourseForm = () => {
                           </div>
                         )}
                       </FormControl>
-                      <FormDescription>
-                        {This}
-                      </FormDescription>
+                      <FormDescription>{This}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   </>
@@ -505,6 +403,7 @@ const CourseForm = () => {
                               id="courseDemo"
                               type="file"
                               className="cursor-pointer"
+                              disabled={isPending}
                               onChange={(e) => {
                                 const file = e.target.files[0];
                                 if (file) {
@@ -530,7 +429,12 @@ const CourseForm = () => {
                               />
                               <Trash
                                 size={16}
-                                className="text-red-900 cursor-pointer hover:text-red-700 absolute bottom-1 right-[-20px] font-bold" // Position the trash icon at the top-right corner
+                                className={cn(
+                                  `text-red-900 cursor-pointer hover:text-red-700 absolute right-[-15px] bottom-0 ${
+                                    isPending &&
+                                    "cursor-not-allowed  text-red-400"
+                                  }`
+                                )}
                                 onClick={() => {
                                   setVideoPreview(null); // Clear the video preview
                                   form.setValue("courseDemo", null); // Clear the value in the form state for the course demo
@@ -540,9 +444,7 @@ const CourseForm = () => {
                           </div>
                         )}
                       </FormControl>
-                      <FormDescription>
-                        {upload}
-                      </FormDescription>
+                      <FormDescription>{upload}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   </>
@@ -552,10 +454,10 @@ const CourseForm = () => {
             {/* Submit Button */}
             <Button
               type="submit"
-              className={cn(isloading ? "bg-gray-400" : "bg-primary", "w-full")}
-              disabled={isloading}
+              className={cn(isPending ? "bg-gray-400" : "bg-primary", "w-full")}
+              disabled={isPending}
             >
-              {isloading ? "creating" : "Next"}
+              {isPending ? (isEdit ? "Updating" : "Creating") : "Next"}
             </Button>
           </form>
         </Form>

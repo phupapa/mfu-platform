@@ -9,19 +9,29 @@ const userRoutes = require("./Routes/user");
 const authRoutes = require("./Routes/auth");
 const courseRoutes = require("./Routes/course");
 const multer = require("multer");
+const compression = require("compression");
+const cookieParser = require("cookie-parser");
 //Socket
 const http = require("http");
 const { Server } = require("socket.io");
+const { errorHandler } = require("./Middleware/errorHandler");
 
 dotenv.config();
 
 const app = express();
+app.use(cookieParser());
+app.use(
+  compression({
+    level: 6,
+    threshold: 100 * 1000,
+  })
+);
 const PORT = process.env.PORT || 4500;
 
 // Middleware
 app.use(
   cors({
-    origin: "*", // Allow all origins (Not recommended for production)
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
@@ -29,10 +39,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(morgan("dev"));
-
-console.log("test commit");
-console.log("test commit");
-console.log("test commit");
 
 //http server
 const server = http.createServer(app);
@@ -91,13 +97,9 @@ app.use((req, res, next) => {
 app.use("/auth", authRoutes);
 app.use(courseRoutes);
 app.use(userRoutes);
+app.use(errorHandler);
 // Initialize Drizzle and start the server
-
-app.get('/health', (req, res) => {
-  res.send({ status: 'ok' });
-});
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-module.exports = { db };

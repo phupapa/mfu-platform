@@ -18,6 +18,7 @@ const {
   user_attempts,
   certificates,
   test_status,
+  completed_lessons,
 } = require("../db");
 const cloudinary = require("../Action/cloudinary");
 
@@ -84,7 +85,7 @@ exports.deleteQuiz = async (req, res) => {
       .where(eq(quizzes.quiz_id, quizID));
     if (!quizToDelete.length) {
       return res
-        .status(404)
+        .status(400)
         .json({ success: false, message: "Quiz not found" });
     }
 
@@ -192,7 +193,7 @@ exports.editQuestion = async (req, res) => {
 
     if (updatedQuestion.affectedRows === 0) {
       return res
-        .status(404)
+        .status(400)
         .json({ success: false, message: "Question not found" });
     }
 
@@ -226,7 +227,7 @@ exports.deleteQuestion = async (req, res) => {
 
     if (deletedQuestion.affectedRows === 0) {
       return res
-        .status(404)
+        .status(400)
         .json({ success: false, message: "Question not found" });
     }
 
@@ -254,7 +255,7 @@ exports.getQuizzesByModule = async (req, res) => {
       .orderBy(quizzes.createdAt, "asc");
 
     if (quizzesList.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
         message: "No quizzes found for this module",
       });
@@ -262,7 +263,6 @@ exports.getQuizzesByModule = async (req, res) => {
 
     res.json({ success: true, quizzes: quizzesList });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({
       success: false,
       message: "An error occurred while fetching quizzes",
@@ -272,21 +272,62 @@ exports.getQuizzesByModule = async (req, res) => {
 
 exports.getTest = async (req, res) => {
   const { courseID } = req.params;
+  const userID = req.userID;
+
   try {
+
+    const existedEnrollment = await db
+    .select()
+    .from(user_Courses)
+    .where(
+      and(
+        eq(user_Courses.user_id, userID),
+        eq(user_Courses.course_id, courseID)
+      )
+    );
+    if(existedEnrollment.length <= 0){
+      return res.status(400).json({
+        success: false,
+        message: "User doesn't enroll this course",
+      });
+    }
+
+    // 1. Fetch the test for the course
     const finalTest = await db
       .select()
       .from(tests)
-      .where(eq(tests.courseID, courseID));
-    if (tests.length === 0) {
-      return res.status(404).json({
+      .where(eq(tests.courseID, courseID))
+      .limit(1); // Ensure only one test is returned
+
+    if (!finalTest[0]) {
+      return res.status(400).json({
         success: false,
         message: "No tests found for this course",
       });
     }
-    res.json({ success: true, finalTest: finalTest });
+
+    // 2. Get attempt count (optimized with COUNT)
+    const attemptCountResult = await db
+      .select({ count: count() })
+      .from(user_attempts)
+      .where(
+        and(
+          eq(user_attempts.userID, userID),
+          eq(user_attempts.testID, finalTest[0].test_id) // Use finalTest[0] since it's an array
+        )
+      );
+
+    const attemptCount = attemptCountResult[0]?.count || 0;
+
+    // 3. Return response with attemptCount
+    res.json({
+      success: true,
+      finalTest: finalTest[0], // Return single test object
+      attemptCount, // Include attempt count
+    });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: "An error occurred while fetching tests",
     });
@@ -313,8 +354,6 @@ exports.getQuizQuestions = async (req, res) => {
     testQuestions.forEach((q) => {
       q.options = JSON.parse(q.options); // Convert JSON string back to array
     });
-
-    console.log(quizQuestions);
 
     res.status(200).json({
       success: true,
@@ -466,7 +505,7 @@ exports.getUserScores = async (req, res) => {
 
     if (enrolledCourses.length === 0) {
       return res
-        .status(404)
+        .status(400)
         .json({ message: "User is not enrolled in any courses." });
     }
 
@@ -520,10 +559,13 @@ exports.getUserScores = async (req, res) => {
 };
 
 exports.submitQuizAnswers = async (req, res) => {
-  const { userID, quizID, answers } = req.body;
+  const { userID, quizID, courseID, answers } = req.body;
 
   if (!quizID) {
     return res.status(400).json({ message: "Quiz ID is required." });
+  }
+  if (!courseID) {
+    return res.status(400).json({ message: "Course ID is required." });
   }
 
   const totalQuestionsResult = await db
@@ -577,6 +619,7 @@ exports.submitQuizAnswers = async (req, res) => {
   } else {
     await db.insert(user_attempts).values({
       userID,
+      courseID,
       quizID,
       testID: null,
       attemptNumber: 1,
@@ -663,11 +706,27 @@ exports.checkTestStatus = async (req, res) => {
 };
 
 exports.submitTestAnswers = async (req, res) => {
-  const { userID, testID, answers } = req.body;
+  const { userID, testID, courseID, answers } = req.body;
 
   if (!testID) {
     return res.status(400).json({ message: "Test ID is required." });
   }
+
+  if (!courseID) {
+    return res.status(400).json({ message: "Test ID is required." });
+  }
+
+  // Get the course ID associated with the test
+  // const testData = await db
+  //   .select({ courseID: tests.courseID })
+  //   .from(tests)
+  //   .where(eq(tests.test_id, testID))
+  //   .limit(1);
+
+  // if (testData.length === 0) {
+  //   return res.status(400).json({ message: "Test not found." });
+  // }
+  // const courseID = testData[0].courseID;
 
   const attemptResult = await db
     .select({ count: count() })
@@ -715,6 +774,7 @@ exports.submitTestAnswers = async (req, res) => {
 
   await db.insert(user_attempts).values({
     userID,
+    courseID,
     quizID: null,
     testID,
     attemptNumber: 3 - remainingAttempts + 1,
@@ -722,6 +782,60 @@ exports.submitTestAnswers = async (req, res) => {
   });
 
   await db.delete(test_status).where(and(eq(test_status.userID, userID)));
+
+  // Check if this was the last attempt and all scores are below 70
+  if (remainingAttempts - 1 === 0) {
+    const allAttempts = await db
+      .select()
+      .from(user_attempts)
+      .where(
+        and(eq(user_attempts.userID, userID), eq(user_attempts.testID, testID))
+      );
+
+    const allBelow70 = allAttempts.every(
+      (attempt) => parseFloat(attempt.score) < 70
+    );
+
+    if (allBelow70) {
+      // Delete completed lessons for this user and course
+      await db
+        .delete(completed_lessons)
+        .where(
+          and(
+            eq(completed_lessons.user_id, userID),
+            eq(completed_lessons.course_id, courseID)
+          )
+        );
+
+      // Reset progress in user_courses
+      await db
+        .update(user_Courses)
+        .set({ progress: 0, is_completed: false })
+        .where(
+          and(
+            eq(user_Courses.user_id, userID),
+            eq(user_Courses.course_id, courseID)
+          )
+        );
+
+      // Delete all test attempts for this user and test
+      await db
+        .delete(user_attempts)
+        .where(
+          and(
+            eq(user_attempts.userID, userID),
+            eq(user_attempts.testID, testID)
+          )
+        );
+      return res.json({
+        success: true,
+        score: scorePercentage,
+        remainingAttempts: remainingAttempts - 1,
+        message:
+          "You have used all 3 attempts. Your progress will now be reset.",
+      });
+    }
+  }
 
   return res.json({
     success: true,
@@ -748,7 +862,7 @@ exports.generateCertificate = async (req, res) => {
       .limit(1);
 
     if (!test.length) {
-      return res.status(404).json({ message: "Test not found" });
+      return res.status(400).json({ message: "Test not found" });
     }
     const course = await db
       .select()
@@ -765,13 +879,13 @@ exports.generateCertificate = async (req, res) => {
       .limit(1);
 
     if (!user.length || !course.length || !attempt.length) {
-      return res.status(404).json({ message: "Data not found" });
+      return res.status(400).json({ message: "Data not found" });
     }
-
-    if (attempt[0].score < 70) {
-      return res
-        .status(400)
-        .json({ message: "Score below 70, no certificate" });
+    const hasPassingAttempt = attempt.some((attempt) => attempt.score >= 70);
+    if (!hasPassingAttempt) {
+      return res.status(400).json({
+        message: "Score is below 70, Certificate will not be granted!",
+      });
     }
 
     const certificate = await db
@@ -900,6 +1014,16 @@ exports.generateCertificate = async (req, res) => {
       certificate_url: uploadResult.secure_url, // Store Cloudinary URL
     });
 
+    await db
+      .update(user_Courses)
+      .set({ is_completed: true })
+      .where(
+        and(
+          eq(user_Courses.user_id, userID),
+          eq(user_Courses.course_id, course[0].course_id)
+        )
+      );
+
     res.status(200).json({
       message: "Certificate generated",
       certificate_url: uploadResult.secure_url,
@@ -928,7 +1052,7 @@ exports.getCertificate = async (req, res) => {
       .where(eq(certificates.userID, userID)); // Ensure userID is correctly used
 
     if (result.length === 0) {
-      return res.status(404).json({ message: "Certificates not found" });
+      return res.status(400).json({ message: "Certificates not found" });
     }
 
     res.status(200).json({
@@ -938,6 +1062,44 @@ exports.getCertificate = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching certificates:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+exports.checkCertificate = async (req, res) => {
+  try {
+    const userID  = req.userID;
+    const { courseID } = req.params;
+    if (!userID) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    if (!courseID) {
+      return res.status(400).json({ message: "CourseID is required!" });
+    }
+
+    const result = await db
+      .select({
+        certificate_url: certificates.certificate_url,
+      })
+      .from(certificates)
+      .where(
+        and(
+          eq(certificates.userID, userID),
+          eq(certificates.courseID, courseID)
+        )
+      );
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Certificates not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Already Certified!",
+      certificate: result,
+    });
+  } catch (error) {
+    console.error("Error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

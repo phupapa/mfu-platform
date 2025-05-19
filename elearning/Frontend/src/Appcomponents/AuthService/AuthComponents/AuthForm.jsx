@@ -1,87 +1,67 @@
-import React from "react";
+import { lazy } from "react";
 
 import {
   Card,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
 } from "@/components/ui/card";
 
-import AuthHeader from "./AuthHeader";
-import { Link } from "react-router-dom";
-import Background from "../../Images/Background.png";
+import MLFL from "../../Images/MLFL.webp";
 
 import Badge from "../../../layouts/Badge";
-import TypingAnimation from "@/components/ui/typing-animation";
-import LangSelector from "@/Appcomponents/Detector/LangSelector";
 
-const AuthForm = ({
-  children,
-  isloginPage,
+const LangSelector = lazy(() =>
+  import("@/Appcomponents/Detector/LangSelector")
+);
+import { Link } from "react-router-dom";
 
-  label_1,
-  label_2,
-  herf_1,
-  herf_2,
-  label_3,
-  label_4,
-  href_3,
-}) => {
+const GreetingSection = lazy(() => import("./GreetingSection"));
+
+const AuthForm = ({ children }) => {
   return (
-    <div className="w-full h-[866px] relative ">
+    <section className="w-full h-[866px] md:h-screen relative">
       <div className="absolute w-full h-full top-0 left-0">
-        <img src={Background} alt="" className="w-full h-full object-cover" />
+        <img
+          src={MLFL}
+          alt="Background"
+          className="w-full h-full object-cover"
+        />
       </div>
 
-      <div className="flex items-center justify-between">
-      <div className="relative z-10 mb-10">
-        <Badge />
-      </div>
-      <div className="mt-0">
-        <LangSelector/>
-      </div>
-      </div>
-
-      <div className="relative max-w-[80%] mx-auto flex  items-center justify-center z-10 gap-10 mt-0">
-        <div className="hidden w-[45%] xl:w-[60%] lg:block flex-col items-center justify-center ">
-          <div className="mb-10">
-            <h2 className="font-semibold text-3xl xl:text-6xl  text-white">
-              DOiTUNG
-            </h2>
-            <h2 className="font-semibold text-4xl xl:text-6xl text-white">
-              E-Learning
-            </h2>
-          </div>
-          <div className="  w-[80%]">
-            <TypingAnimation
-              className={`text-lg text-white font-semibold xl:text-xl`}
-            >
-              {"Let's build a better community with Doi-Tung"}
-            </TypingAnimation>
-          </div>
+      <div className="flex items-center justify-between p-4 md:p-0">
+        <div className="relative z-10 mb-10">
+          <Badge />
         </div>
+        <div className="mt-0">
+          <LangSelector />
+        </div>
+      </div>
 
-        <div className=" rounded-3xl w-[489px] h-[450px]">
-          <Card className="rounded-2xl flex flex-col bg-opacity-90 h-full gap-7 bg-pale">
-            <CardHeader className="">
-              <AuthHeader
-                label_1={label_1}
-                label_2={label_2}
-                herf_1={herf_1}
-                herf_2={herf_2}
-              />
+      <div className="relative max-w-[90%] md:max-w-[80%] w-full mx-auto flex flex-col md:flex-row items-center justify-center z-10 gap-5 md:gap-10 mt-5 md:mt-0">
+        {/* Hide GreetingSection on mobile */}
+        <GreetingSection className="hidden md:block" />
+
+        <div className="rounded-3xl w-full max-w-md h-auto md:h-[400px]">
+          <Card className="rounded-2xl flex flex-col bg-opacity-90 h-full gap-5 bg-pale">
+            <CardHeader>
+              <h1 className="text-lg md:text-xl text-center font-semibold text-gray-800 mt-4">
+                Welcome to Mae Fah Luang Foundation
+              </h1>
             </CardHeader>
-            <CardContent>
-              {children}
-              <CardDescription className="text-center cursor-pointer flex flex-col justify-center items-center gap-4 mt-2">
-                <Link to={href_3}>{label_3}</Link>
-                {isloginPage && <p> {label_4}</p>}
-              </CardDescription>
-            </CardContent>
+            <CardContent className="p-0 px-4 md:px-6">{children}</CardContent>
+            <CardFooter className="flex items-end ml-auto">
+              <Link
+                to={"/auth/admins_login"}
+                className="p-1 border-b-2 border-black"
+              >
+                Admin side
+              </Link>
+            </CardFooter>
           </Card>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

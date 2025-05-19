@@ -1,83 +1,129 @@
-import React, { useEffect, useMemo, useState } from "react";
-import Logo from "../Appcomponents/Images/mfllogo_2.png";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { shallowEqual, useDispatch, useSelector } from "react-redux";
+import React, { useCallback, useEffect, useMemo, useState, lazy } from "react";
+import Logo from "../Appcomponents/Images/MLFL_Logo.png";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import { Clock, LogOutIcon, User2Icon, Users2Icon, Bell } from "lucide-react";
+import { Clock, LogOutIcon, Menu, User2Icon, X } from "lucide-react";
 import { setUser } from "../store/Slices/UserSlice";
 import { toast } from "sonner";
-import LangSelector from "@/Appcomponents/Detector/LangSelector";
+const LangSelector = lazy(() =>
+  import("@/Appcomponents/Detector/LangSelector")
+);
+import { useTranslation } from "react-i18next";
+import { logoutaction } from "@/EndPoints/auth";
+
+import ReportAlert from "./ReportAlert";
+import { persistor } from "@/store/Store";
 
 const Navigation = () => {
-  console.log("Header render");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [type] = useState("All");
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [type, setType] = useState("All");
-  const location = useLocation();
+  const { t, i18n } = useTranslation();
+
+  const NavMenu = t("nav", { returnObjects: true });
+  const translatedLabels = t("navigation", { returnObjects: true });
+
+  const { Home, About, Courses } = NavMenu;
+  console.log(NavMenu);
+  const { my_profile, watch, log_out } = translatedLabels;
+
+  const user = useSelector((state) => state.user.user, shallowEqual);
+
   const menuItems = useMemo(
     () => [
-      { link: "/", label: "Home" },
-      { link: "/about", label: "About" },
-      { link: `/user/explore_courses?type=${type}`, label: "Courses" },
+      { link: "/", label: Home },
+      { link: "/user/about", label: About },
+      { link: `/user/explore_courses`, label: Courses },
     ],
-    [type]
-  ); // Prevent re-creation unless `type` change
-  const { user } = useSelector((state) => state.user, shallowEqual);
+    [t, type, i18n.language]
+  );
 
-  const logout = () => {
-    dispatch(setUser(null));
-    localStorage.removeItem("persist:root");
-    localStorage.removeItem("token");
-    navigate("/auth/login");
-    toast.warning("Your account has logged out");
-  };
-
-  useEffect(() => {
-    const checkWidget = setInterval(() => {
-      const select = document.querySelector(".goog-te-combo");
-      if (select) {
-        console.log("Google Translate widget loaded"); // Debugging
-        clearInterval(checkWidget);
-      }
-    }, 500);
-
-    return () => clearInterval(checkWidget);
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen((prev) => !prev);
   }, []);
 
+  const handleNavigateHome = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
+
+  const logout = useCallback(async () => {
+    try {
+      const response = await logoutaction();
+      if (response.isSuccess) {
+        dispatch(setUser(null));
+        await persistor.purge();
+        localStorage.removeItem("token");
+
+        // Small delay to ensure purge + localStorage are cleared properly
+        setTimeout(() => {
+          navigate("/auth/login", { replace: true });
+          toast.warning(response.message);
+        }, 100); // 100ms is enough
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }, [dispatch, navigate]);
+
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.href = Logo;
+    link.as = "image";
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
+
+  const avatarFallback = useMemo(() => {
+    return user?.user_name?.slice(0, 2).toUpperCase() || "";
+  }, [user?.user_name]);
+
+  const profileLink = useMemo(() => {
+    return user?.role === "user"
+      ? `/user/user-profile/${user?.user_id}`
+      : `/admin/dashboard/${user?.user_id}`;
+  }, [user]);
+
+  const watchLink = useMemo(() => {
+    return user?.role === "user"
+      ? `/user/savetowatch/${user?.user_id}`
+      : undefined;
+  }, [user]);
+  useEffect(() => {
+    if (user === null) {
+      navigate("/auth/login");
+    }
+  }, [user, navigate]);
+
   return (
-    <div className="flex items-center justify-between max-w-7xl h-24 mx-auto px-4 md:px-8">
-      {/* Logo */}
-      <div className="flex items-center w-[200px]">
+    <section className="flex items-center justify-between w-[89%] h-24 mx-auto px-4 md:px-8 relative">
+      <div className="flex items-center">
         <img
           src={Logo}
           alt="Logo"
-          className="h-10 md:h-12 cursor-pointer"
-          onClick={() => navigate("/")}
+          className="h-10 w-10 md:w-16 md:h-16 cursor-pointer"
+          onClick={handleNavigateHome}
+          loading="lazy"
         />
       </div>
-      {/* Menu Toggle Button for Mobile */}
-      <div>
-        <button
-          className="block md:hidden text-2xl"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          ☰
-        </button>
 
+      <div>
         {/* Menu Items */}
         <div
           className={`${
             isMenuOpen ? "block" : "hidden"
-          } absolute top-20 z-[30] left-0 w-full bg-white md:bg-transparent md:static md:flex md:items-center md:gap-12`}
+          } absolute top-24 z-[30] left-0 w-full bg-white md:bg-transparent md:static md:flex md:items-center md:gap-12 `}
         >
           <div className="flex flex-col md:flex-row md:items-center md:gap-12 w-full md:w-auto">
             {menuItems.map((item) => (
@@ -85,12 +131,17 @@ const Navigation = () => {
                 <Link
                   to={item.link}
                   className={`block py-2 text-lg hover:text-yellow-400 ${
-                    location.pathname === item.link && "text-yellow-400"
+                    location.pathname === item.link ||
+                    location.pathname + location.search === item.link
+                      ? "text-yellow-400"
+                      : ""
                   }`}
+                  onClick={() => toggleMenu()}
                 >
                   {item.label}
                 </Link>
-                {location.pathname === item.link && (
+                {(location.pathname === item.link ||
+                  location.pathname + location.search === item.link) && (
                   <hr className="h-1 bg-yellow-400 mt-1 w-24 hidden md:block" />
                 )}
               </div>
@@ -98,67 +149,54 @@ const Navigation = () => {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        {/* User Avatar and Dropdown */}
+
+      <div className="flex items-center gap-4">
+        <ReportAlert />
         {user && (
-          <div className="hidden md:block">
+          <div className="md:block">
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <Avatar className="cursor-pointer">
+                <Avatar className="cursor-pointer" aria-label="User Avatar">
                   <AvatarImage src={user.user_profileImage} />
-                  <AvatarFallback>
-                    {user &&
-                      user.user_name &&
-                      user.user_name.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
+                  <AvatarFallback>{avatarFallback}</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="my-3 p-3 w-[250px]">
                 <div className="flex gap-3 p-3 border-2 border-black/20 rounded-lg items-center cursor-pointer hover:scale-95 transition-all duration-300 ease-in-out">
                   <Avatar>
                     <AvatarImage src={user.user_profileImage} />
-                    <AvatarFallback>
-                      {user &&
-                        user.user_name &&
-                        user.user_name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarFallback>{avatarFallback}</AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-bold text-sm">{user.user_name}</p>
                     <p className="font-medium text-sm">{user.user_email}</p>
                   </div>
                 </div>
-                <Link
-                  to={`${
-                    user.role === "user"
-                      ? `/user/user-profile/${user.user_id}`
-                      : `/admin/dashboard/${user.user_id}`
-                  }`}
-                >
+
+                <Link to={profileLink}>
                   <DropdownMenuItem className="cursor-pointer group h-12 mt-2 hover:bg-black/10 hover:border-none">
                     <User2Icon className="w-5 h-5 mr-3 group-hover:translate-x-1 group-hover:text-blue-600 transition-all duration-300 ease-in-out" />
-
-                    <span className="text-sm font-bold">My profile</span>
+                    <p className="text-sm font-bold">{my_profile}</p>
                   </DropdownMenuItem>
                 </Link>
-                <Link
-                  to={`${
-                    user.role === "user" && `/user/savetowatch/${user.user_id}`
-                  }`}
-                >
-                  <DropdownMenuItem className="cursor-pointer group h-12 mt-2 hover:bg-black/10 hover:border-none">
-                    <Clock className="w-5 h-5 mr-3 group-hover:translate-x-1 group-hover:text-green-600 transition-all duration-300 ease-in-out" />
 
-                    <span className="text-sm font-bold">Watch later</span>
-                  </DropdownMenuItem>
-                </Link>
+                {watchLink && (
+                  <Link to={watchLink}>
+                    <DropdownMenuItem className="cursor-pointer group h-12 mt-2 hover:bg-black/10 hover:border-none">
+                      <Clock className="w-5 h-5 mr-3 group-hover:translate-x-1 group-hover:text-green-600 transition-all duration-300 ease-in-out" />
+                      <p className="text-sm font-bold">{watch}</p>
+                    </DropdownMenuItem>
+                  </Link>
+                )}
+
                 <DropdownMenuItem
                   className="cursor-pointer h-12 group hover:border-none"
                   onClick={logout}
+                  aria-label="Logout"
                 >
                   <LogOutIcon className="w-5 h-5 mr-3 group-hover:translate-x-1 group-hover:text-red-600 group-hover:scale-90 transition-all duration-300 ease-in-out" />
                   <span className="text-sm font-medium group-hover:text-red-600 transition-all duration-300 ease-in-out">
-                    Log out
+                    {log_out}
                   </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -166,8 +204,14 @@ const Navigation = () => {
           </div>
         )}
         <LangSelector />
+        <button
+          className="block md:hidden text-2xl"
+          onClick={() => toggleMenu()}
+        >
+          {!isMenuOpen ? <Menu /> : <X />}
+        </button>
       </div>
-    </div>
+    </section>
   );
 };
 

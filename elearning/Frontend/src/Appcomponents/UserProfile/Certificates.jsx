@@ -1,48 +1,66 @@
-import { GetCertificate } from "@/EndPoints/user";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-const Certificates = ({ userId }) => {
-  const [certificate, setCertificate] = useState([]);
+const Certificates = ({ certificate }) => {
+  const { t } = useTranslation();
 
-  const getCertificate = async () => {
-    try {
-      const response = await GetCertificate(userId);
-      console.log("API Response:", response); // Debugging
-      setCertificate(response.certificates || []); // Ensure it's always an array
-    } catch (error) {
-      console.error("Error fetching certificates:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (userId) {
-      getCertificate();
-    }
-  }, [userId]);
-
+  const { certificates, view, nothing } = t("navigation", {
+    returnObjects: true,
+  });
   return (
     <>
-    <h1 className="text-[18px] text-center pt-4">My Certificates</h1>
-      <div className="bg-pale rounded-xl h-auto w-full my-7 overflow-y-auto">
-        
+      <h1 className="text-[18px] text-center pt-8 font-bold">{certificates}</h1>
+      <div className="bg-pale rounded-xl h-[300px] w-full my-7 overflow-y-auto">
         {certificate.length > 0 ? (
-          <div className="grid grid-cols-3 gap-4 p-4">
-            {certificate.map((item, index) => (
-              <div key={index} className="w-full flex flex-col items-center justify-center text-center gap-4 h-[200px] rounded-xl bg-white p-4">
-                <div className="h-[180px] flex items-center text-center">
-                  <p className="font-semibold text-base">{item.course_name || "Course Name Missing"}</p>
+          <>
+            <Table className="mt-4">
+              <TableHeader className="text-base">
+                <TableRow>
+                  <TableHead className="text-center">Course Name</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              {certificate ? (
+                certificate.map((item, index) => (
+                  <TableBody key={index}>
+                    <TableRow>
+                      <TableCell className="text-center">
+                        {item.course_name}
+                      </TableCell>
+                      <TableCell className="flex justify-center items-center">
+                        <a
+                          href={item.certificate_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full flex justify-center"
+                        >
+                          <Button className="w-full max-w-xs px-4 py-2 flex justify-center items-center text-sm text-center break-words">
+                            {view}
+                          </Button>
+                        </a>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                ))
+              ) : (
+                <div>
+                  <p>No Certificates to show.</p>
                 </div>
-      
-                <a href={item.certificate_url} target="_blank" rel="noopener noreferrer" className="text-white w-full">
-                <Button className="w-full">View Certificate</Button>
-                </a>
-      
-              </div>
-            ))}
-          </div>
+              )}
+            </Table>
+          </>
         ) : (
-          <div className="text-center py-12 text-gray-400">Nothing to show</div>
+          <div className="text-center py-12 text-gray-400">{nothing}</div>
         )}
       </div>
     </>
@@ -50,4 +68,3 @@ const Certificates = ({ userId }) => {
 };
 
 export default Certificates;
-

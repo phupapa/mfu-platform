@@ -2,7 +2,6 @@ import {
   Play,
   Timer,
   BookOpenCheck,
-  CheckCheck,
   CircleCheckBig,
   CircleAlert,
 } from "lucide-react";
@@ -34,6 +33,7 @@ import {
 
 import { toast } from "sonner";
 import Test from "./Test";
+import { useTranslation } from "react-i18next";
 
 const MemoizedComments = React.memo(Comments);
 const MemoizedQuizzes = React.memo(Quizzes);
@@ -93,15 +93,6 @@ const StartLessons = ({
     }
   };
 
-  const handleSeeked = (e) => {
-    const video = videoRef.current;
-    if (video) {
-      if (video.currentTime > lastAllowedTime) {
-        video.currentTime = lastAllowedTime; // Reset to the last allowed time
-      }
-    }
-  };
-
   const handlePlayPause = () => {
     const video = videoRef.current;
     if (video) {
@@ -146,8 +137,13 @@ const StartLessons = ({
   ////
   const saveprogess = async (courseID, userID, progress) => {
     try {
-      let response = await ProgressSaving(courseID, userID, progress);
-    } catch (error) {}
+      const response = await ProgressSaving(courseID, userID, progress);
+      if (!response.isSuccess) {
+        toast.info(response.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
   ///
 
@@ -248,16 +244,48 @@ const StartLessons = ({
   }, [activeLesson, courseID, userID]);
 
   const formatDuration = (seconds) => {
-    if (seconds < 60) {
-      return `${Math.round(seconds)}s`;
+    // Round seconds to avoid excessive decimals
+    const roundedSeconds = Math.round(seconds);
+
+    // Handle durations less than 60 seconds
+    if (roundedSeconds < 60) {
+      return `${roundedSeconds}s`;
     }
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return remainingSeconds > 0
-      ? `${minutes}m ${remainingSeconds}s`
-      : `${minutes}m`;
+
+    const hours = Math.floor(roundedSeconds / 3600);
+    const minutes = Math.floor((roundedSeconds % 3600) / 60);
+    const remainingSeconds = roundedSeconds % 60;
+
+    // Format the output
+    let formattedDuration = "";
+
+    if (hours > 0) {
+      formattedDuration += `${hours}h `;
+    }
+
+    if (minutes > 0 || hours > 0) {
+      formattedDuration += `${minutes}m `;
+    }
+
+    if (remainingSeconds > 0) {
+      formattedDuration += `${remainingSeconds}s`;
+    }
+
+    return formattedDuration.trim();
   };
 
+  const { t } = useTranslation();
+
+  const {
+    module,
+    lesson,
+    created,
+    learning_progress,
+    out_of,
+    activities_completed,
+    pass_final,
+    not_final,
+  } = t("start", { returnObjects: true });
   return (
     <>
       <div className={`w-[85%] mx-auto pb-14`}>
@@ -266,7 +294,7 @@ const StartLessons = ({
             <div className="w-full my-5">
               <p className="text-2xl font-bold">{coursetitle}</p>
               <p className="text-xl my-3 font-semi-bold text-heading">
-                Module: <span className="font-bold">{ModuleTitle}</span>
+                {module} <span className="font-bold">{ModuleTitle}</span>
               </p>
             </div>
             {lectureUrl ? (
@@ -278,9 +306,7 @@ const StartLessons = ({
                   controls
                   onTimeUpdate={handleTimeUpdate}
                   onEnded={handleVideoEnd}
-                  onSeeking={handleSeeking}
-                  onSeeked={handleSeeked}
-                  // onSeeking={handleSeeking}
+                  onSeeking={handleSeeki2ng}
                 />
                 {!isPlaying && (
                   <div
@@ -330,20 +356,22 @@ const StartLessons = ({
             )}
             <div>
               {currentLesson && (
-                <div className="h-fit w-full rounded-lg shadow-lg mx-auto bg-pale mt-5">
-                  <div className="p-4">
-                    <p className="font-semibold text-xl">
-                      Lesson - {currentLesson.lesson_title}
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      Created at -
+                <div className="w-full  mx-auto mt-8 border bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg">
+                  <div className="p-6">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                      {lesson}
+                      {currentLesson.lesson_title}
+                    </h2>
+                    <div className="text-sm text-gray-500 flex items-center gap-2">
+                      <span>{created}</span>
+                      <span className="w-1 h-1 bg-gray-400 rounded-full" />
                       <span>
                         {format(
                           parseISO(currentLesson.createdAt),
                           "MMMM dd, yyyy hh:mm a"
                         )}
                       </span>
-                    </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -363,10 +391,12 @@ const StartLessons = ({
           {/* Accordian */}
           <div className="sticky right-0 top-0 bottom-700 w-full h-full lg:w-1/3 mx-auto">
             <div className="w-full my-3">
-              <h2 className="text-lg font-semibold mb-3">Learning progress</h2>
-              <p className="text-gray-500">{`${completedLessonsCounts} out of ${totalCourseItems} activities completed`}</p>
+              <h2 className="text-lg font-semibold mb-3">
+                {learning_progress}
+              </h2>
+              <p className="text-gray-500">{`${completedLessonsCounts} ${out_of}${totalCourseItems} ${activities_completed}`}</p>
               <div className="flex gap-3">
-                <Progress value={progress} className="mt-2" />{" "}
+                <Progress value={progress} className="mt-2" />
                 <p className="font-bold text-md">{`${progress}`}%</p>
               </div>
             </div>
@@ -466,8 +496,6 @@ const StartLessons = ({
                   <button
                     className="cursor-pointer flex justify-center font-bold items-center bg-gray-900 w-[95%] mx-auto p-2 rounded-lg text-white hover:bg-gray-800"
                     onClick={() => {
-                      console.log(user.user_id);
-                      console.log(progress);
                       dispatch(setTimeLeft(finalTest?.timeLimit));
                       navigate(
                         `/user/course/${user.user_id}/${courseID}/${finalTest?.test_id}`,
@@ -482,17 +510,13 @@ const StartLessons = ({
                 </div>
                 <div className="flex items-center justify-center gap-2 mt-3 px-4 py-2 bg-red-50 border border-red-300 rounded-lg text-red-700">
                   <CircleAlert className="w-6 h-6 flex-shrink-0" />
-                  <span className="text-sm font-medium">
-                    You need 50% test score to pass the final test
-                  </span>
+                  <span className="text-sm font-medium">{pass_final}</span>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2 mt-3 px-4 py-2 bg-red-50 border border-red-300 rounded-lg text-red-700">
                 <CircleAlert className="w-6 h-6 flex-shrink-0" />
-                <span className="text-sm font-medium">
-                  This course does not have final test
-                </span>
+                <span className="text-sm font-medium">{not_final}</span>
               </div>
             )}
           </div>
@@ -503,25 +527,3 @@ const StartLessons = ({
 };
 
 export default StartLessons;
-
-// {/* <div
-//   className={`flex flex-col lg:flex-row w-[95%] sm:max-w-[85%] mx-auto justify-between my-5 gap-4`}
-// >
-//   <div className="w-full lg:w-[30%]">
-//     <h2 className="text-lg font-semibold mb-3">Learning progress</h2>
-//     <p className="text-gray-500">{`${completedLessonsCounts} out of ${totalCourseItems} activities completed`}</p>
-//     <div className="flex gap-3">
-//       <Progress value={progress} className="mt-2"/>{" "}
-//       <p className="font-bold text-md">{`${progress}`}%</p>
-//     </div>
-//   </div>
-// </div> */}
-
-// const calculateProgress = useCallback(() => {
-//   const updatedProgress = parseFloat(
-//     ((completedLessonsCounts / totalCourseItems) * 100).toFixed(2)
-//   );
-//   if (updatedProgress !== progress) {
-//     setProgress(updatedProgress);
-//   }
-// }, [completedLessonsCounts, totalCourseItems, progress]);

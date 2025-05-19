@@ -7,6 +7,7 @@ export const registerUser = async (payload) => {
 
     return response.data;
   } catch (error) {
+    console.log(error);
     return error.response.data;
   }
 };
@@ -22,7 +23,6 @@ export const LoginUser = async (payload) => {
   }
 };
 
-
 export const CheckUser = async () => {
   try {
     const response = await axiosInstance.get("/auth/getCurrentUser");
@@ -33,18 +33,41 @@ export const CheckUser = async () => {
   }
 };
 
-
 // Edit user profile (username, profile picture, and password change)
 export const editUserProfile = async (payload, token) => {
   try {
     console.log(token);
-    const response = await axiosInstance.put("/auth/edit-profile", payload, {
-      headers: {
-        Authorization: `Bearer ${token}`, // Send JWT token in header for authentication
-      },
-    });
+    const response = await axiosInstance.put("/auth/edit-profile", payload);
     return response.data;
   } catch (error) {
+    return error.response.data;
+  }
+};
+
+export const logoutaction = async () => {
+  try {
+    const response = await axiosInstance.post(
+      "/auth/logoutaction",
+
+      {
+        withCredentials: true, // 🔥 important for cookies
+      }
+    );
+    return response.data;
+  } catch (error) {
+    return error.response.data;
+  }
+};
+
+export const adminsLogin = async (payload) => {
+  try {
+    const response = await axiosInstance.post(
+      "/auth/adminloginaction",
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    console.log(error);
     return error.response.data;
   }
 };

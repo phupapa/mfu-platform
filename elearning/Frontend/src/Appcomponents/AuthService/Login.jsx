@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import AuthForm from "./AuthComponents/AuthForm";
+import React, { lazy, Suspense, useState } from "react";
+
 import TextField from "@mui/material/TextField";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,15 +13,19 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
 import { loginSchema } from "../../types/loginschema";
-import { LoginUser } from "../../EndPoints/auth";
+import { LoginUser } from "../../EndPoints/auth"; // Static import
+import { setUser } from "../../store/Slices/UserSlice";
+const AuthForm = lazy(() => import("./AuthComponents/AuthForm"));
+
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { setUser } from "../../store/Slices/UserSlice";
+import { OrbitProgress } from "react-loading-indicators";
 
 const Login = () => {
-  const [istwostep, setIstwostep] = useState(false);
+  console.log("hi");
   const navigate = useNavigate();
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -39,6 +43,7 @@ const Login = () => {
       const response = await LoginUser(values);
 
       if (response.isSuccess) {
+        console.log(response);
         form.reset();
         toast.success(response.message);
 
@@ -57,23 +62,20 @@ const Login = () => {
   };
 
   return (
-    <div>
-      <AuthForm
-        label_1={"LOGIN"}
-        label_2={"REGISTER"}
-        herf_1={"/auth/login"}
-        herf_2={"/auth/register"}
-        label_3={"Cannot login?"}
-        label_4={"Contact admin team via phone"}
-        showProvider={true}
-        isloginPage={true}
-      >
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen">
+          <OrbitProgress color="#32cd32" size="medium" text="" textColor="" />;
+        </div>
+      }
+    >
+      <AuthForm>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(loginOnsubmit)}
             className="px-2 flex flex-col gap-2"
           >
-            <div className="flex flex-col gap-7">
+            <div className="flex flex-col gap-5">
               <FormField
                 control={form.control}
                 name="username"
@@ -81,7 +83,7 @@ const Login = () => {
                   <FormItem>
                     <FormControl>
                       <TextField
-                        id="outlined-basic"
+                        // id="outlined-basic"
                         label="Username"
                         placeholder="john doe"
                         {...field}
@@ -100,7 +102,7 @@ const Login = () => {
                   <FormItem>
                     <FormControl>
                       <TextField
-                        id="outlined-basic"
+                        // id="outlined-basic"
                         label="Password"
                         placeholder="******"
                         {...field}
@@ -121,18 +123,12 @@ const Login = () => {
               disabled={loading}
               className={cn("w-full h-12 bg-customGreen my-4 text-[18px]")}
             >
-              {loading
-                ? istwostep
-                  ? "Verifying"
-                  : "Logging in"
-                : istwostep
-                ? "Verify"
-                : "Login"}
+              {loading ? "Logging in" : "Login"}
             </Button>
           </form>
         </Form>
       </AuthForm>
-    </div>
+    </Suspense>
   );
 };
 

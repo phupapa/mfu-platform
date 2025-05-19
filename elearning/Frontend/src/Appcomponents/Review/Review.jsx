@@ -1,47 +1,32 @@
 import { cn } from "@/lib/utils";
 import Marquee from "@/components/ui/marquee";
-import * as React from "react";
+import React, { useMemo } from "react";
 import { MessageSquareQuote } from "lucide-react";
-const reviews = [
-  {
-    name: "Jack",
-    username: "@jack",
-    body: "I've never seen anything like this before. It's amazing. I love it.",
-    img: "https://avatar.vercel.sh/jack",
-  },
-  {
-    name: "Jill",
-    username: "@jill",
-    body: "I don't know what to say. I'm speechless. This is amazing.",
-    img: "https://avatar.vercel.sh/jill",
-  },
-  {
-    name: "John",
-    username: "@john",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/john",
-  },
-  {
-    name: "Jane",
-    username: "@jane",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/jane",
-  },
-  {
-    name: "Jenny",
-    username: "@jenny",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/jenny",
-  },
-  {
-    name: "James",
-    username: "@james",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/james",
-  },
-];
+import { OrbitProgress } from "react-loading-indicators";
+import { GetAllReviews } from "@/EndPoints/user";
 
-const ReviewCard = ({ img, name, username, body }) => {
+import StarRatings from "react-star-ratings";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+
+const ReviewCard = ({ review_text, rating, user_name, user_profileImage }) => {
+  const labels = {
+    0.5: "Useless",
+    1: "Useless+",
+    1.5: "Poor",
+    2: "Poor+",
+    2.5: "Ok",
+    3: "Ok+",
+    3.5: "Good",
+    4: "Good+",
+    4.5: "Excellent",
+    5: "Excellent+",
+  };
+
+  const avatarFallback = useMemo(() => {
+    return user_name?.slice(0, 2).toUpperCase() || "";
+  }, [user_name]);
   return (
     <figure
       className={cn(
@@ -56,34 +41,94 @@ const ReviewCard = ({ img, name, username, body }) => {
         <MessageSquareQuote />
       </span>
       <div className="flex flex-row items-center gap-2 relative">
-        <img className="rounded-full" width="32" height="32" alt="" src={img} />
+        <Avatar className="cursor-pointer" aria-label="User Avatar">
+          <AvatarImage src={user_profileImage} />
+          <AvatarFallback>{avatarFallback}</AvatarFallback>
+        </Avatar>
         <div className="flex flex-col">
           <figcaption className="text-sm font-medium dark:text-white">
-            {name}
+            {user_name}
           </figcaption>
-          <p className="text-xs font-medium dark:text-white/40">{username}</p>
+
+          <StarRatings
+            rating={rating}
+            starRatedColor="gold"
+            numberOfStars={5}
+            name="rating"
+            starDimension="16px"
+            starSpacing="2px"
+          />
         </div>
       </div>
-      <blockquote className="mt-2 text-sm">{body}</blockquote>
+      <blockquote className="mt-2 ml-12 text-sm">
+        {(review_text || labels[rating]).slice(0, 100)}...
+      </blockquote>
     </figure>
   );
 };
 
-export function Review() {
+const Review = () => {
+  const { t } = useTranslation();
+
+  const { Hero } = t("Home", { returnObjects: true });
+  const { data: reviews, isLoading } = useQuery({
+    queryKey: ["reviews"],
+    queryFn: GetAllReviews,
+    staleTime: Infinity,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <OrbitProgress color="#32cd32" size="large" text="" textColor="" />
+      </div>
+    );
+  }
+  const sampleReviews = [
+    {
+      review_id: "sample1",
+      review_text:
+        "This platform is amazing! The UI is clean and easy to navigate. I highly recommend it.",
+      rating: 4.5,
+      user_name: "Alice Smith",
+      user_profileImage: "https://randomuser.me/api/portraits/women/45.jpg",
+    },
+    {
+      review_id: "sample2",
+      review_text:
+        "Had a great experience using this service. Everything works smoothly and efficiently.",
+      rating: 4,
+      user_name: "John Doe",
+      user_profileImage: "https://randomuser.me/api/portraits/men/32.jpg",
+    },
+    {
+      review_id: "sample3",
+      review_text:
+        "Support is responsive and helpful. Really satisfied with the features offered.",
+      rating: 5,
+      user_name: "Emily Johnson",
+      user_profileImage: "https://randomuser.me/api/portraits/women/68.jpg",
+    },
+  ];
+  const finalReviews = reviews?.length > 0 ? reviews : sampleReviews;
   return (
-    <div className="relative flex flex-col items-center justify-center  h-[260px] w-full p-1 overflow-hidden rounded-lg  bg-background my-3">
-      <Marquee pauseOnHover className="[--duration:40s] ">
-        {reviews.map((review) => (
-          <ReviewCard key={review.username} {...review} />
-        ))}
-      </Marquee>
-      {/* <Marquee reverse pauseOnHover className="[--duration:20s]">
-        {secondRow.map((review) => (
-          <ReviewCard key={review.username} {...review} />
-        ))}
-      </Marquee> */}
-      {/* <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-white dark:from-background"></div> */}
-      {/* <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-white dark:from-background"></div> */}
-    </div>
+    <>
+      {finalReviews?.length > 0 && (
+        <section className="relative flex flex-col items-center justify-center  h-[360px] w-full p-1 overflow-hidden rounded-lg  bg-background my-10">
+          <div className=" w-[85%] mx-auto ">
+            <h1 className="text-center text-xl font-semibold mb-10">
+              <p className="text-red-800 font-bold">{Hero.Reviews}</p>
+              {Hero.From_Clients}
+            </h1>
+            <Marquee pauseOnHover className="[--duration:15s] ">
+              {finalReviews.map((review) => (
+                <ReviewCard key={review.review_id} {...review} />
+              ))}
+            </Marquee>
+          </div>
+        </section>
+      )}
+    </>
   );
-}
+};
+export default Review;

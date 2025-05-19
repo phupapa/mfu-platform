@@ -8,11 +8,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import React from "react";
+
 import { Link, useLocation } from "react-router-dom";
 
 export const Navgeneral = ({ items }) => {
-  const { state } = useSidebar();
   const location = useLocation(); // Get current location
 
   return (
@@ -49,7 +48,7 @@ const SidebarMenuLink = ({ item, isActive }) => {
         className={cn(isActive ? "bg-gray-200" : "")} // Conditionally apply class
         tooltip={item.title}
       >
-        <Link to={item.url} onClick={() => setOpenMobile(false)}>
+        <Link to={item.url} replace onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
           <span>{item.title}</span>
         </Link>

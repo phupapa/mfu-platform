@@ -1,22 +1,10 @@
-"use client";
-
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -29,18 +17,32 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { setUser } from "@/store/Slices/UserSlice";
+import { logoutaction } from "@/EndPoints/auth";
+import { persistor } from "@/store/Store";
 
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const logoutHandler = () => {
-    dispatch(setUser(null));
-    localStorage.removeItem("persist:root");
-    localStorage.removeItem("token");
-    navigate("/auth/login");
-    toast.warning("Your account has logged out");
+  const logoutHandler = async () => {
+    try {
+      const response = await logoutaction();
+      if (response.isSuccess) {
+        dispatch(setUser(null));
+        await persistor.purge();
+        localStorage.removeItem("token");
+
+        // Small delay to ensure purge + localStorage are cleared properly
+        setTimeout(() => {
+          navigate("/auth/login", { replace: true });
+          toast.warning(response.message);
+        }, 100); // 100ms is enough
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -52,7 +54,7 @@ export function NavUser({ user }) {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user?.profile_Image} alt={user?.user_name} />
-                <AvatarFallback className="rounded-lg font-bold ">
+                <AvatarFallback className="rounded-full font-bold border border-gray-300">
                   {user?.user_name?.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>

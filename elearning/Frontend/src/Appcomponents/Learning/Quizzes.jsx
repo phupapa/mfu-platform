@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { GetQuestions, SubmitQuizAnswers } from "@/EndPoints/quiz";
 import { toast } from "sonner";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { set } from "react-hook-form";
 import { setLessonCompleted, getcompletedLessons } from "@/EndPoints/courses";
 
 const Quizzes = ({
@@ -89,7 +88,7 @@ const Quizzes = ({
 
     if (window.confirm("Are you sure to Submit?")) {
       try {
-        const payload = { userID: user, quizID: ID, answers: formattedAnswers };
+        const payload = { userID: user, quizID: ID, courseID: courseID, answers: formattedAnswers };
         const response = await SubmitQuizAnswers(payload);
 
         if (response.success) {
@@ -127,7 +126,6 @@ const Quizzes = ({
                   onClick={() => {
                     setSubmitted(false);
                     setPreview(true);
-                    console.log(answers);
                   }}
                 >
                   Preview Attempts

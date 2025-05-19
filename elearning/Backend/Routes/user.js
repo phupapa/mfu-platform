@@ -25,7 +25,11 @@ router.get(
 );
 router.get("/enrolledCourses/:userid", usercontroller.getEnrolledCourses);
 
-router.get("/fetchcourse/:userid/:courseid", usercontroller.CourseToLearn);
+router.get(
+  "/fetchcourse/:userid/:courseid",
+  authMiddleware,
+  usercontroller.CourseToLearn
+);
 router.post(
   "/restrictuser/:userid",
   authMiddleware,
@@ -69,13 +73,20 @@ router.get(
   "/review/checkReview/:user_id/:course_id",
   reviewController.checkUserReview
 );
+router.get("/review/getAllReviews", reviewController.getAllReviews);
+
 router.get(
   "/progress/:courseID/:userID",
   authMiddleware,
   countController.totalLessonCounts
 );
 
-router.get("/getAllenrollments", authMiddleware, isAdmin, usercontroller.allUserEnrollments);
+router.get(
+  "/getAllenrollments",
+  authMiddleware,
+  isAdmin,
+  usercontroller.allUserEnrollments
+);
 
 router.post(
   "/save_progress/:courseID/:userID",
@@ -84,7 +95,17 @@ router.post(
   usercontroller.setProgress
 );
 
-router.get("/getreports", authMiddleware, isUser, usercontroller.getUserReports);
-router.post("/mark-report-read", authMiddleware, isUser, usercontroller.markReportAsRead);
+router.get(
+  "/getreports",
+  authMiddleware,
+  isUser,
+  usercontroller.getUserReports
+);
+router.post(
+  "/mark-report-read",
+  authMiddleware,
+  isUser,
+  usercontroller.markReportAsRead
+);
 
 module.exports = router;

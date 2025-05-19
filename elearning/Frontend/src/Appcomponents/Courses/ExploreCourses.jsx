@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
 import {
   Pagination,
   PaginationContent,
@@ -30,9 +37,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ChevronDown, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, SpinLoader } from "@/lib/utils";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { OrbitProgress } from "react-loading-indicators";
+import { useTranslation } from "react-i18next";
+
 const ExploreCourses = ({ courses, isLoading }) => {
   const options = [
     { id: "option-one", label: "All" },
@@ -53,7 +62,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
   );
 
   const filteredCourses = useCallback(() => {
-    return courses.filter((course) => {
+    return courses?.filter((course) => {
       // Check if the course matches the search query and if it matches the selected category
       const matchesSearch = course.course_name
         .toLowerCase()
@@ -76,7 +85,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
     () => filteredCourses(),
     [filterCat, tier, searchQuery, courses]
   );
-  const currentCourses = memoizedFilteredCourses.slice(
+  const currentCourses = memoizedFilteredCourses?.slice(
     indexOfFirstCourse,
     indexOfLastCourse
   );
@@ -108,6 +117,11 @@ const ExploreCourses = ({ courses, isLoading }) => {
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
   }, []);
+
+  const { t } = useTranslation();
+
+  const { explore } = t("Home", { returnObjects: true });
+
   return (
     <div>
       <div className="bg-pale h-[400px] py-12">
@@ -115,12 +129,11 @@ const ExploreCourses = ({ courses, isLoading }) => {
           {/* Heading */}
           <div className="text-center space-y-4">
             <h1 className="text-2xl sm:text-3xl lg:text-3xl text-heading font-bold animate__animated animate__fadeInDown">
-              Unlock Your Potential with{" "}
-              <span className="text-red-700">Doi Tung</span>
+              {explore.unlock}
+              <span className="text-red-700">{explore.doitung}</span>
             </h1>
             <p className="text-base sm:text-lg animate__animated animate__fadeInDown">
-              Explore our curated courses designed to inspire, educate, and
-              empower you.
+              {explore.explore_our}
             </p>
           </div>
 
@@ -160,7 +173,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
             <div className="relative w-full sm:w-auto flex-1">
               <Input
                 type="text"
-                placeholder="Search courses"
+                placeholder={explore.search}
                 className="w-full h-10"
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -203,21 +216,18 @@ const ExploreCourses = ({ courses, isLoading }) => {
             {filterCat ? (
               <span>{filterCat}</span>
             ) : (
-              <span>{tier !== "popular" && !filterCat && "All courses"}</span>
+              <span>
+                {tier !== "popular" && !filterCat && explore.all_courses}
+              </span>
             )}
-            {tier === "popular" && !filterCat && <span>Popular courses</span>}
+            {tier === "popular" && !filterCat && (
+              <span>{explore.popular_courses}</span>
+            )}
           </div>
           {currentCourses && currentCourses.length !== 0 ? (
             <>
               {isLoading ? (
-                <div className="flex items-center justify-center h-screen">
-                  <OrbitProgress
-                    color="#32cd32"
-                    size="large"
-                    text=""
-                    textColor=""
-                  />
-                </div>
+                <SpinLoader />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-6">
                   {currentCourses.map((course, index) => (
@@ -255,7 +265,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
                               </span>
                             </CardDescription>
                             <CardDescription className="flex items-center gap-5">
-                              Rating - {course.rating}
+                              {explore.rating} {course.rating}
                               <div>
                                 <StarRatings
                                   rating={course.rating}
@@ -276,7 +286,9 @@ const ExploreCourses = ({ courses, isLoading }) => {
                               to={`/user/explore_courses/overview/${course.course_id}`}
                               className="w-full"
                             >
-                              <Button className="w-full">Check Course</Button>
+                              <Button className="w-full">
+                                {explore.check_course}
+                              </Button>
                             </Link>
                           </CardFooter>
                         </CardContent>
@@ -289,14 +301,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
           ) : (
             <>
               {isLoading ? (
-                <div className="flex items-center justify-center h-screen">
-                  <OrbitProgress
-                    color="#32cd32"
-                    size="large"
-                    text=""
-                    textColor=""
-                  />
-                </div>
+                <SpinLoader />
               ) : (
                 <div>
                   <DotLottieReact
@@ -306,7 +311,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
                     height={100}
                   />
                   <p className="text-center text-3xl mb-0 mt-3">
-                    No Results Found.
+                    {explore.no_results}
                   </p>
                 </div>
               )}
@@ -320,7 +325,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
                 className={`hover:bg-gray-400 cursor-pointer ${
                   currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
                 }`}
-                label="Previous"
+                label={explore.previous}
                 disabled={currentPage === 1} // This will still disable the button
                 onClick={() =>
                   currentPage > 1 && handlePageChange(currentPage - 1)
@@ -341,7 +346,7 @@ const ExploreCourses = ({ courses, isLoading }) => {
                 </PaginationItem>
               ))}
               <PaginationNext
-                label="Next"
+                label={explore.next}
                 className={`hover:bg-gray-400 cursor-pointer ${
                   currentPage === totalPages
                     ? "opacity-50 cursor-not-allowed"
@@ -360,4 +365,4 @@ const ExploreCourses = ({ courses, isLoading }) => {
   );
 };
 
-export default ExploreCourses;
+export default React.memo(ExploreCourses);

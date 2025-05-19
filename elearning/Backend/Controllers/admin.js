@@ -1,4 +1,4 @@
-const { eq } = require("drizzle-orm");
+const { eq, and } = require("drizzle-orm");
 const {
   allcourses,
   modules,
@@ -8,13 +8,17 @@ const {
   user_Courses,
   users,
   userReports,
+  completed_lessons,
+  certificates,
+  user_attempts,
+  test_status,
 } = require("../db");
 const db = require("../db/db");
 
 exports.courseDetail = async (req, res) => {
   try {
     const { courseID } = req.params; // Extract course ID from request params
-    console.log(courseID);
+
     // Query course details, related modules, lessons, quizzes, and tests in a single query
     const courseData = await db
       .select()
@@ -46,9 +50,8 @@ exports.courseDetail = async (req, res) => {
     }));
 
     if (courseData.length === 0) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(400).json({ message: "Course not found" });
     }
-    // console.log(courseData[0]);
     const courseDetails = courseData.reduce(
       (acc, { courses, modules, lessons, quizzes, tests }) => {
         // Find or create the course entry
@@ -92,17 +95,10 @@ exports.courseDetail = async (req, res) => {
       []
     );
 
-    // console.log(courseDetails[0]);
-    // Calculate total lessons and quizzes
-    // const allModules = courseDetails[0].flatMap((cd) => cd.modules);
-    // console.log("addmodule", allModules);
-    // const totalModules = allModules.length;
-
-    console.log(enrolledUsers);
     const allLessons = courseDetails[0].modules.flatMap(
       (module) => module.lessons
     );
-    // console.log(allLessons);
+
     const totalLessons = allLessons.length;
 
     const allQuizzes = courseDetails[0].modules.flatMap(
@@ -118,35 +114,85 @@ exports.courseDetail = async (req, res) => {
       enrolledUsers,
     });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
+//
 exports.removeEnrolledUser = async (req, res) => {
   try {
-    const { userid } = req.params;
+    const { userid, courseid } = req.params;
 
     if (!userid) {
       throw new Error("User ID is required!!!");
+    }
+    if (!courseid) {
+      throw new Error("Course ID is required!!!");
     }
 
     const existedUser = await db
       .select()
       .from(user_Courses)
-      .where(eq(user_Courses.user_id, userid));
+      .where(
+        and(
+          eq(user_Courses.user_id, userid),
+          eq(user_Courses.course_id, courseid)
+        )
+      );
 
     if (existedUser.length === 0) {
       throw new Error("User doesn't exist!!!");
     }
-    await db.delete(user_Courses).where(eq(user_Courses.user_id, userid));
+
+    await db
+      .delete(user_Courses)
+      .where(
+        and(
+          eq(user_Courses.user_id, userid),
+          eq(user_Courses.course_id, courseid)
+        )
+      );
+    await db
+      .delete(completed_lessons)
+      .where(
+        and(
+          eq(completed_lessons.user_id, userid),
+          eq(completed_lessons.course_id, courseid)
+        )
+      );
+    await db
+      .delete(certificates)
+      .where(
+        and(
+          eq(certificates.userID, userid),
+          eq(certificates.courseID, courseid)
+        )
+      );
+
+    await db
+      .delete(user_attempts)
+      .where(
+        and(
+          eq(user_attempts.userID, userid),
+          eq(user_attempts.courseID, courseid)
+        )
+      );
+
+      await db
+      .delete(test_status)
+      .where(
+        and(
+          eq(test_status.userID, userid),
+          eq(test_status.courseID, courseid)
+        )
+      );
 
     return res.status(200).json({
       isSuccess: true,
       message: `Removed a user from this course`,
     });
   } catch (error) {
-    console.error(error);
+    console.log(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -155,9 +201,6 @@ exports.sendReport = async (req, res) => {
   try {
     const { user_id, subject, contents } = req.body;
     const admin_id = req.userID;
-
-    console.log(req.body);
-    console.log(admin_id);
 
     // Validate input
     if (!user_id || !subject || !contents) {
@@ -172,11 +215,11 @@ exports.sendReport = async (req, res) => {
       admin_id,
     });
 
-    return res.status(201).json({ message: "Report sent successfully!" });
+    return res
+      .status(201)
+      .json({ success: true, message: "Report sent successfully!" });
   } catch (error) {
     console.error("Error sending report:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
-

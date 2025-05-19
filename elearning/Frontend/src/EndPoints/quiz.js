@@ -78,6 +78,7 @@ export const CreateTest = async (payload) => {
 export const GetTest = async (courseID) => {
   try {
     const response = await axiosInstance.get(`/test/getTest/${courseID}`);
+    console.log(response.data);
     return response.data;
   } catch (error) {
     return error.response.data;
@@ -109,7 +110,7 @@ export const SubmitQuizAnswers = async (payload) => {
   } catch (error) {
     return error.response.data;
   }
-}
+};
 
 export const SubmitTestAnswers = async (payload) => {
   try {
@@ -118,7 +119,7 @@ export const SubmitTestAnswers = async (payload) => {
   } catch (error) {
     return error.response.data;
   }
-}
+};
 
 export const GetUserScores = async (userId) => {
   try {
@@ -130,12 +131,21 @@ export const GetUserScores = async (userId) => {
   }
 };
 
-export const GenerateCertificate = async (payload) =>{
+export const GenerateCertificate = async (payload) => {
   try {
     const response = await axiosInstance.post("/generate", payload);
     return response.data;
   } catch (error) {
     return error.response.data;
   }
-}
+};
 
+export const CheckCertificate = async (courseID) => {
+  try {
+    const response = await axiosInstance.get(`/checkCertificate/${courseID}`);
+    console.log(response);
+    return response.data; // Ensure it always returns an array
+  } catch (error) {
+    return error?.response.data?.message; // Return an empty array on error
+  }
+};

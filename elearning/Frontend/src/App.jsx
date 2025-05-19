@@ -1,258 +1,201 @@
-import React from "react";
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { OrbitProgress } from "react-loading-indicators";
+const Home = lazy(() => import("./Pages/Home"));
+const AboutUs = lazy(() => import("./Pages/AboutUs"));
+const Login = lazy(() => import("./Appcomponents/AuthService/Login"));
+const Main = lazy(() => import("./layouts/Main"));
+const ErrorPage = lazy(() => import("./Pages/ErrorPage"));
+const AuthProvider = lazy(() => import("./providers/AuthProvider"));
+const Courses = lazy(() => import("./Pages/Courses"));
+const CourseOverview = lazy(() => import("./Pages/CourseOverview"));
+const Dashboard = lazy(() => import("./Pages/Dashboard"));
+const Profile = lazy(() => import("./Pages/Profile"));
+const Createcourse = lazy(() => import("./Pages/Createcourse"));
+const EditProfile = lazy(() => import("./Pages/EditProfile"));
+const CourseForm = lazy(() =>
+  import("./Appcomponents/Creation/CourseCreate/CourseForm")
+);
+const CreateLessons = lazy(() =>
+  import("./Appcomponents/Creation/CreateModule/CreateLessons")
+);
+const Users = lazy(() => import("./Pages/Users"));
+const Learning = lazy(() => import("./Pages/Learning"));
+const UserEnrolledcourse = lazy(() =>
+  import("./Appcomponents/AdminSide/Management/UserEnrolledcourse")
+);
+const ProtectedRoute = lazy(() => import("./providers/ProtectedRoute"));
+const Savetowatch = lazy(() => import("./Pages/Savetowatch"));
+const RegisterNewUser = lazy(() =>
+  import("./Appcomponents/AdminSide/CreateUser/NewUser")
+);
+const AnswerTest = lazy(() => import("./Pages/AnswerTest"));
 
-import Home from "./Pages/Home";
-import AboutUs from "./Pages/AboutUs";
-import Register from "./Appcomponents/AuthService/Register";
-import Login from "./Appcomponents/AuthService/Login";
-import Main from "./layouts/Main";
-
-import Forgotpassword from "./Appcomponents/AuthService/Password/Forgotpassword";
-import ErrorPage from "./Pages/ErrorPage";
-import AuthProvider from "./providers/AuthProvider";
-
-import Courses from "./Pages/Courses";
-import CourseOverview from "./Pages/CourseOverview";
-
-import Dashboard from "./Pages/Dashboard";
-import Profile from "./Pages/Profile";
-import Createcourse from "./Pages/Createcourse";
-
-// import CourseForm from "./Appcomponents/Creation/CourseForm";
-
-import EditProfile from "./Pages/EditProfile";
-import CourseForm from "./Appcomponents/Creation/CourseCreate/CourseForm";
-import CreateLessons from "./Appcomponents/Creation/CreateModule/CreateLessons";
-import Users from "./Pages/Users";
-import Learning from "./Pages/Learning";
-import UserEnrolledcourse from "./Appcomponents/AdminSide/Management/UserEnrolledcourse";
-// import { Register as AccountRegister } from "./Appcomponents/AdminSide/Registeration/Register
-import ProtectedRoute from "./providers/ProtectedRoute";
-import Savetowatch from "./Pages/Savetowatch";
-import RegisterNewUser from "./Appcomponents/AdminSide/CreateUser/NewUser";
-import CourseDetail from "./Appcomponents/Courses/Management/CourseDetail";
-import AnswerTest from "./Pages/AnswerTest";
-import Report from "./Appcomponents/AdminSide/Management/Report";
-import UserReports from "./Appcomponents/UserProfile/UserReports";
+const UserReports = lazy(() =>
+  import("./Appcomponents/UserProfile/UserReports")
+);
+const CourseDetail = lazy(() =>
+  import("./Appcomponents/AdminSide/CourseManagement/CourseDetail")
+);
+const AdminsLogin = lazy(() => import("./Pages/AdminsLogin"));
+const CheckAccess = lazy(() => import("./providers/CheckAccess"));
 
 const App = () => {
-  const router = createBrowserRouter( [
+  const router = createBrowserRouter([
     {
       path: "/",
-      element: <Main />,
+      element: <AuthProvider />,
       children: [
         {
-          index: true,
-          element: (
-            <ProtectedRoute allowedRoles={["user"]}>
-              <AuthProvider>
-                <Home />
-              </AuthProvider>
-            </ProtectedRoute>
-          ),
-        },
-        {
-          path: "/auth/register",
-          element: <Register />,
-        },
-        {
-          path: "/auth/login",
-          element: <Login />,
-        },
-
-        {
-          path: "/auth/forgotpassword",
-          element: (
-            <ProtectedRoute allowedRoles={["superadmin"]}>
-              <AuthProvider>
-                <Forgotpassword />
-              </AuthProvider>
-            </ProtectedRoute>
-          ),
-        },
-
-        // 🔹 Protected Admin Routes
-        {
-          path: "/admin",
-
+          path: "",
+          element: <Main />,
           children: [
             {
-              path: "dashboard/:userid",
+              index: true,
               element: (
-                <ProtectedRoute allowedRoles={["superadmin"]}>
-                  <AuthProvider>
-                    <Dashboard />
-                  </AuthProvider>
+                <ProtectedRoute allowedRoles={["user"]}>
+                  <Home />
                 </ProtectedRoute>
               ),
             },
+
             {
-              path: "course_management/coursedetail/:courseid",
-              element: (
-                <ProtectedRoute allowedRoles={["superadmin"]}>
-                  <AuthProvider>
-                    <CourseDetail />
-                  </AuthProvider>
-                </ProtectedRoute>
-              ),
+              path: "/auth",
+              children: [
+                {
+                  element: <CheckAccess />, // Apply once here
+                  children: [
+                    {
+                      path: "login",
+                      element: <Login />,
+                    },
+                    {
+                      path: "admins_login",
+                      element: <AdminsLogin />,
+                    },
+                  ],
+                },
+              ],
             },
+            // 🔹 Protected Admin Routes
             {
-              path: "users_management",
-              element: (
-                <ProtectedRoute allowedRoles={["superadmin"]}>
-                  <AuthProvider>
-                    <Users />
-                  </AuthProvider>
-                </ProtectedRoute>
-              ),
+              path: "/admin",
+              children: [
+                // Superadmin-only routes
+                {
+                  element: <ProtectedRoute allowedRoles={["superadmin"]} />,
+                  children: [
+                    {
+                      path: "dashboard/:userid",
+                      element: <Dashboard />,
+                    },
+                    {
+                      path: "users_management",
+                      element: <Users />,
+                    },
+                    {
+                      path: "register",
+                      element: <RegisterNewUser />,
+                    },
+                  ],
+                },
+
+                // Admin + Superadmin shared routes
+                {
+                  element: (
+                    <ProtectedRoute allowedRoles={["admin", "superadmin"]} />
+                  ),
+                  children: [
+                    {
+                      path: "course_management/coursedetail/:courseid",
+                      element: <CourseDetail />,
+                    },
+                    {
+                      path: "enrollment",
+                      element: <UserEnrolledcourse />,
+                    },
+                    {
+                      path: "course_management",
+                      element: <Createcourse />,
+                    },
+                    {
+                      path: "course_management/createcourse",
+                      element: <CourseForm />,
+                    },
+                    {
+                      path: "course_management/createcourse/:courseID/createlessons",
+                      element: <CreateLessons />,
+                    },
+                  ],
+                },
+              ],
             },
+            // 🔹 Protected User Routes
             {
-              path: "register",
-              element: (
-                <ProtectedRoute allowedRoles={["superadmin"]}>
-                  <AuthProvider>
-                    <RegisterNewUser />
-                  </AuthProvider>
-                </ProtectedRoute>
-              ),
+              path: "/user",
+              element: <ProtectedRoute allowedRoles={["user"]} />,
+              children: [
+                {
+                  path: "user-profile/:userid",
+                  element: <Profile />,
+                },
+                {
+                  path: "savetowatch/:userid",
+                  element: <Savetowatch />,
+                },
+                {
+                  path: "editProfile",
+                  element: <EditProfile />,
+                },
+                {
+                  path: "reports",
+                  element: <UserReports />,
+                },
+                {
+                  path: "explore_courses",
+                  element: <Courses />,
+                },
+                {
+                  path: "explore_courses/overview/:courseID",
+                  element: <CourseOverview />,
+                },
+                {
+                  path: "course/:userID/:courseID",
+                  element: <Learning />,
+                },
+                {
+                  path: "course/:userID/:courseID/:testID",
+                  element: <AnswerTest />,
+                },
+
+                {
+                  path: "about",
+                  element: <AboutUs />,
+                },
+              ],
             },
+
             {
-              path: "enrollment",
-              element: (
-                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                  <AuthProvider>
-                    <UserEnrolledcourse />
-                  </AuthProvider>
-                </ProtectedRoute>
-              ),
-            },
-            {
-              path: "course_management",
-              element: (
-                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                  <AuthProvider>
-                    <Createcourse />
-                  </AuthProvider>
-                </ProtectedRoute>
-              ),
-            },
-            {
-              path: "course_management/createcourse",
-              element: (
-                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                  <AuthProvider>
-                    <CourseForm />
-                  </AuthProvider>
-                </ProtectedRoute>
-              ),
-            },
-            {
-              path: "course_management/createcourse/:courseID/createlessons",
-              element: (
-                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                  <AuthProvider>
-                    <CreateLessons />
-                  </AuthProvider>
-                </ProtectedRoute>
-              ),
+              path: "*",
+              element: <ErrorPage />,
             },
           ],
-        },
-
-        // 🔹 Protected User Routes
-        {
-          path: "/user",
-          element: <ProtectedRoute allowedRoles={["user"]} />,
-          children: [
-            {
-              path: "user-profile/:userid",
-              element: (
-                <AuthProvider>
-                  <Profile />
-                </AuthProvider>
-              ),
-            },
-            {
-              path: "savetowatch/:userid",
-              element: (
-                <AuthProvider>
-                  <Savetowatch />
-                </AuthProvider>
-              ),
-            },
-            {
-              path: "editProfile",
-              element: (
-                <AuthProvider>
-                  <EditProfile />
-                </AuthProvider>
-              ),
-            },
-            {
-              path: "reports",
-              element: (
-                <AuthProvider>
-                  <UserReports/>
-                </AuthProvider>
-              ),
-            },
-            {
-              path: "explore_courses",
-              element: (
-                <AuthProvider>
-                  <Courses />{" "}
-                </AuthProvider>
-              ),
-            },
-            {
-              path: "explore_courses/overview/:courseID",
-              element: (
-                <AuthProvider>
-                  <CourseOverview />
-                </AuthProvider>
-              ),
-            },
-            {
-              path: "course/:userID/:courseID",
-              element: (
-                <AuthProvider>
-                  <Learning />
-                </AuthProvider>
-              ),
-            },
-            {
-              path: "course/:userID/:courseID/:testID",
-              element: (
-                <AuthProvider>
-                  <AnswerTest />
-                </AuthProvider>
-              ),
-            },
-          ],
-        },
-
-        {
-          path: "/about",
-          element: (
-            <AuthProvider>
-              <AboutUs />
-            </AuthProvider>
-          ),
-        },
-
-        {
-          path: "*",
-          element: <ErrorPage />,
         },
       ],
-    } 
-  ]
-  ,{
-    basename: "/elearning"
-  }
-);
+    },
+  ]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen">
+          <OrbitProgress color="#32cd32" size="medium" text="" textColor="" />;
+        </div>
+      }
+    >
+      <RouterProvider router={router} />
+    </Suspense>
+  );
 };
 
 export default App;

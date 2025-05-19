@@ -36,6 +36,7 @@ const QuizForm = ({
   });
 
   const onSubmit = async (values) => {
+    console.log(values);
     const formData = new FormData();
     formData.append("title", values.title);
     formData.append("moduleID", moduleID);
@@ -44,7 +45,7 @@ const QuizForm = ({
       setCreating(true);
       const response = await CreateQuiz(formData);
       const lastQuiz = response.quizzes.at(-1);
-      console.log(lastQuiz);
+
       if (response.success) {
         toast.success(response.message);
         reset();
