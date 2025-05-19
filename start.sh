@@ -1,53 +1,30 @@
 #!/bin/bash
 
-# ================================
-# 🔧 Configurable Ports
-# ================================
-PORTS_IN_USE=(5173 3306)
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
 
-# ================================
-# 🔥 Stop and remove all containers
-# ================================
-echo "🛑 Stopping and removing all containers..."
-docker stop $(docker ps -aq) 2>/dev/null
-docker rm $(docker ps -aq) 2>/dev/null
-
-# ================================
-# ⚔️ Kill processes using important ports
-# ================================
-for PORT in "${PORTS_IN_USE[@]}"; do
-  PID=$(lsof -ti tcp:$PORT)
-  if [ ! -z "$PID" ]; then
-    echo "⚠️ Port $PORT is in use by PID $PID. Killing it..."
-    kill -9 $PID
-  else
-    echo "✅ Port $PORT is free."
-  fi
-done
-
-# ================================
-# 🌐 Create Docker network if not exists
-# ================================
-echo "🔗 Ensuring Docker network exists: app-network"
 docker network create app-network 2>/dev/null || echo "network exists"
 
-# ================================
-# 🚀 Pull, Build, and Run Services
-# ================================
-SERVICES=(el2 elearning nginx)
+# Pull latest changes for each service
+echo "📥 Pulling latest code for el2"
+cd "el2"
+git pull
+echo "🔧 Building and starting el2"
+docker compose up --build -d
+cd ..
 
-for SERVICE in "${SERVICES[@]}"; do
-  echo ""
-  echo "📥 Pulling latest code for $SERVICE"
-  cd "$SERVICE" || { echo "❌ Directory $SERVICE not found!"; exit 1; }
+echo "📥 Pulling latest code for elearning"
+cd "elearning"
+git pull
+echo "🔧 Building and starting elearning"
+docker compose up --build -d
+cd ..
 
-  git pull || { echo "❌ Failed to pull $SERVICE"; exit 1; }
+echo "📥 Pulling latest code for nginx"
+cd "nginx"
+git pull
+echo "🌐 Starting nginx reverse proxy..."
+docker compose up --build -d
+cd ..
 
-  echo "🔧 Building and starting $SERVICE"
-  docker compose up --build -d || { echo "❌ Failed to build $SERVICE"; exit 1; }
-
-  cd ..
-done
-
-echo ""
-echo "✅ All services are up and running!"
+echo "✅ All services are up!"

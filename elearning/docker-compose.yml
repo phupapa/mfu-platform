@@ -19,7 +19,7 @@ services:
     volumes:
       - ./Backend:/usr/src/app
     ports:
-      - "4500:4500"  # API server
+      - "127.0.0.1:4500:4500"  # API server
     command: ["sh", "-c", "npm install && node server.js"]
     env_file:
       - ./Backend/.env
