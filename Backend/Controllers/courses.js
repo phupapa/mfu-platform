@@ -85,14 +85,19 @@ exports.courseDetail = async (req, res) => {
           module = { ...modules, lessons: [], quizzes: [] };
           course.modules.push(module);
         }
-
-        // Add the lesson to the module if it exists
-        if (lessons) {
+        // Add the lesson to the module if it exists and not already added
+        if (
+          lessons &&
+          !module.lessons.some((l) => l.lesson_id === lessons.lesson_id)
+        ) {
           module.lessons.push(lessons);
         }
 
-        // Add the quiz to the module if it exists
-        if (quizzes) {
+        // Add the quiz to the module if it exists and not already added
+        if (
+          quizzes &&
+          !module.quizzes.some((q) => q.quiz_id === quizzes.quiz_id)
+        ) {
           module.quizzes.push(quizzes);
         }
 

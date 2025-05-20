@@ -33,7 +33,7 @@ const Navigation = () => {
   const translatedLabels = t("navigation", { returnObjects: true });
 
   const { Home, About, Courses } = NavMenu;
-  console.log(NavMenu);
+
   const { my_profile, watch, log_out } = translatedLabels;
 
   const user = useSelector((state) => state.user.user, shallowEqual);
