@@ -1,30 +1,51 @@
 #!/bin/bash
 
-docker stop $(docker ps -a -q)
-docker rm $(docker ps -a -q)
+MODE=$1
 
-docker network create app-network 2>/dev/null || echo "network exists"
+if [ -z "$MODE" ]; then
+  echo "❗️ Please specify a mode: dev or prod"
+  echo "Usage: ./start.sh dev | ./start.sh prod"
+  exit 1
+fi
 
-# Pull latest changes for each service
-echo "📥 Pulling latest code for el2"
-cd "el2"
+# ✅ สร้าง shared Docker network ถ้ายังไม่มี
+docker network create app-network 2>/dev/null || echo "🌐 Docker network 'app-network' already exists"
+
+# 👉 เข้า elearning
+echo "📥 Pulling latest code for elearning..."
+cd elearning
 git pull
-echo "🔧 Building and starting el2"
-docker compose up --build -d
-cd ..
 
-echo "📥 Pulling latest code for elearning"
-cd "elearning"
-git pull
-echo "🔧 Building and starting elearning"
-docker compose up --build -d
-cd ..
+if [ "$MODE" = "dev" ]; then
+  echo "🧪 Starting development environment..."
+  docker compose -f docker-compose.dev.yml up --build -d
 
-echo "📥 Pulling latest code for nginx"
-cd "nginx"
-git pull
-echo "🌐 Starting nginx reverse proxy..."
-docker compose up --build -d
-cd ..
+  echo "📥 Pulling latest code for nginx..."
+  cd ../nginx
+  git pull
+  docker compose -f docker-compose.dev.yml up --build -d
 
-echo "✅ All services are up!"
+  echo -e "✅ \033[0;32mDev environment ready at: http://localhost/elearning\033[0m"
+
+elif [ "$MODE" = "prod" ]; then
+  echo "🚀 Building production frontend..."
+  cd Frontend
+  npm install
+  npm run build
+  cd ..
+
+  echo "🔧 Starting backend + database..."
+  docker compose -f docker-compose.prod.yml up --build -d
+
+  echo "📥 Pulling latest code for nginx..."
+  cd ../nginx
+  git pull
+  docker compose -f docker-compose.prod.yml up --build -d
+
+  echo -e "✅ \033[0;32mProduction ready at: http://mymfu.doitung.net/elearning\033[0m"
+
+else
+  echo "❗️ Invalid mode: $MODE"
+  echo "Usage: ./start.sh dev | ./start.sh prod"
+  exit 1
+fi

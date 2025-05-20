@@ -50,3 +50,22 @@
 ---
 
 > 📌 นักศึกษาที่พัฒนาโปรเจกต์ ให้ทำงานใน branch: `dev-elearning`, `dev-laundry` และแจ้งพี่ผู้ดูแลหากพร้อมสำหรับการ Deploy ขึ้น Production
+
+
+
+
+For user
+Username- kyaw g 
+Password 123456
+
+For admin 
+Username -test
+Email -test@gmail.com
+Password 123456
+Admintoken 123456 (stored in database)
+
+For superadmin
+Username - aung ye lin
+Password - nayyelin@gmail.com
+Password 123456
+Admintoken 989808 ( token in dotenv)

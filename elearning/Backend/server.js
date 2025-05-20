@@ -100,6 +100,12 @@ app.use(userRoutes);
 app.use(errorHandler);
 // Initialize Drizzle and start the server
 
+
+app.get('/', (req, res) => {
+  res.send('Hello World from Express!');
+});
+
+
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

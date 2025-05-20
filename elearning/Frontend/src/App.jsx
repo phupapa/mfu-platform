@@ -183,7 +183,10 @@ const App = () => {
         },
       ],
     },
-  ]);
+  ],
+  {
+    basename: "/elearning", 
+  });
 
   return (
     <Suspense
