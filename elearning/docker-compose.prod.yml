@@ -43,7 +43,7 @@ services:
       PMA_USER: root
       PMA_PASSWORD: rootpassword
     ports:
-      - "200:80"
+      - "222:80"
     depends_on:
       - db
     networks:
