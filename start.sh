@@ -1,5 +1,6 @@
 #!/bin/bash
-
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
 MODE=$1
 
 if [ -z "$MODE" ]; then
