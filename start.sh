@@ -24,12 +24,12 @@ if [ "$MODE" = "dev" ]; then
   cd ..
  
   echo "🧪 Starting development environment..."
-  docker compose -f docker-compose.dev.yml up --build -d
+  docker compose -f docker-compose.dev.yml up -d --build 
 
   echo "📥 Pulling latest code for nginx..."
   cd ../nginx
   git pull
-  docker compose -f docker-compose.dev.yml up --build -d
+  docker compose -f docker-compose.dev.yml up -d --build 
 
   echo -e "✅ \033[0;32mDev environment ready at: http://localhost/elearning\033[0m"
 
@@ -41,12 +41,12 @@ elif [ "$MODE" = "prod" ]; then
   cd ..
 
   echo "🔧 Starting backend + database..."
-  docker compose -f docker-compose.prod.yml up --build -d
+  docker compose -f docker-compose.prod.yml up -d --build 
 
   echo "📥 Pulling latest code for nginx..."
   cd ../nginx
   git pull
-  docker compose -f docker-compose.prod.yml up --build -d
+  docker compose -f docker-compose.prod.yml up -d --build 
 
   echo -e "✅ \033[0;32mProduction ready at: http://mymfu.doitung.net/elearning\033[0m"
 
