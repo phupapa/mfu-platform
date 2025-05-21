@@ -20,7 +20,7 @@ if [ "$MODE" = "dev" ]; then
   echo "🚀 Building dev frontend..."
   cd Frontend
   npm install
-  npm run build
+  npm run build -- --mode dev
   cd ..
  
   echo "🧪 Starting development environment..."
@@ -37,7 +37,7 @@ elif [ "$MODE" = "prod" ]; then
   echo "🚀 Building production frontend..."
   cd Frontend
   npm install
-  npm run build
+  npm run build -- --mode production
   cd ..
 
   echo "🔧 Starting backend + database..."

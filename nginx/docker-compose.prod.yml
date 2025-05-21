@@ -6,7 +6,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ../elearning/Frontend/dist:/usr/share/nginx/html/elearning:ro
+      - ../elearning/Frontend/dist/elearning:/usr/share/nginx/html/elearning:ro
     networks:
       - app-network
     restart: always
