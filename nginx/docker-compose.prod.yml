@@ -5,9 +5,13 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ../elearning/Frontend/dist:/usr/share/nginx/html/elearning:ro
+    depends_on:
+      - express
     networks:
       - app-network
+    restart: always
 
 networks:
   app-network:

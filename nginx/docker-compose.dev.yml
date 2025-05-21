@@ -1,0 +1,16 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ../elearning/Frontend/dist:/usr/share/nginx/html/elearning:ro 
+    networks:
+      - app-network
+    restart: always
+
+networks:
+  app-network:
+    external: true

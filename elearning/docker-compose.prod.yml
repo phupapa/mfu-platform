@@ -1,0 +1,58 @@
+services:
+  backend:
+    image: node:18-alpine
+    platform: linux/amd64
+    container_name: express
+    working_dir: /usr/src/app
+    volumes:
+      - ./Backend:/usr/src/app
+    command: sh -c "npm install && node server.js"
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./Backend/.env
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - db
+    networks:
+      - app-network
+    restart: always
+
+  db:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: elearning
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin
+    platform: linux/amd64
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    ports:
+      - "222:80"
+    depends_on:
+      - db
+    networks:
+      - app-network
+    restart: always
+ 
+volumes:
+  mysql-data:
+
+networks:
+  app-network:
+    external: true
