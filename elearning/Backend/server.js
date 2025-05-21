@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 4500;
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:5173",
+     origin: ['http://localhost:5173', 'http://localhost', 'http://localhost:52555'], // ✅ เพิ่ม origin ที่จะเรียกเข้ามา
     credentials: true,
   })
 );

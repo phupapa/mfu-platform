@@ -1,21 +1,4 @@
-services:
-  frontend:
-    build:
-      context: ./Frontend
-    platform: linux/amd64
-    container_name: elearning
-    working_dir: /app
-    volumes:
-      - ./Frontend:/app
-    command: sh -c "npm install && npm run dev -- --host"
-    ports:
-      - "5173:5173"
-    environment:
-      - NODE_ENV=development
-    networks:
-      - app-network
-    restart: always
-
+services: 
   backend:
     image: node:18-alpine
     platform: linux/amd64

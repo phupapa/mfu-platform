@@ -17,6 +17,12 @@ cd elearning
 git pull
 
 if [ "$MODE" = "dev" ]; then
+  echo "🚀 Building dev frontend..."
+  cd Frontend
+  npm install
+  npm run build
+  cd ..
+ 
   echo "🧪 Starting development environment..."
   docker compose -f docker-compose.dev.yml up --build -d
 

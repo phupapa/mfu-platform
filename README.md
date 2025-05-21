@@ -11,18 +11,31 @@
 - **Frontend (Vite + React)**  
   📍 https://mymfu.doitung.net/elearning
 
-- **Backend (Express + MySQL)**  
-  API สำหรับจัดการเวิร์กโฟลว์ และยืนยันตัวตน
+- **Backend (Express)**  
+  📍 https://mymfu.doitung.net/elearning_api
 
-- **ฐานข้อมูล / phpMyAdmin**  
+- **ฐานข้อมูล MYSQL / phpMyAdmin**  
   📍 https://mymfu.doitung.net/db
 
 ## 🔐 บัญชีทดสอบระบบ
 
 | ประเภทผู้ใช้     | Username | Password   |
-|------------------|----------|------------|
-| ผู้ใช้งานทั่วไป | `user`   | `testtest` |
-| ผู้ดูแลระบบ     | `admin`  | `testtest` |
+|------------------|----------|------------| 
+For user
+Username- kyaw g 
+Password 123456
+
+For admin 
+Username -test
+Email -test@gmail.com
+Password 123456
+Admintoken 123456 (stored in database)
+
+For superadmin
+Username - aung ye lin
+Password - nayyelin@gmail.com
+Password 123456
+Admintoken 989808 ( token in dotenv)
 
 ---
 
@@ -53,19 +66,3 @@
 
 
 
-
-For user
-Username- kyaw g 
-Password 123456
-
-For admin 
-Username -test
-Email -test@gmail.com
-Password 123456
-Admintoken 123456 (stored in database)
-
-For superadmin
-Username - aung ye lin
-Password - nayyelin@gmail.com
-Password 123456
-Admintoken 989808 ( token in dotenv)
