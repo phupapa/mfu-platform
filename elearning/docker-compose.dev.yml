@@ -1,26 +1,14 @@
-services:
-  frontend:
-    build: ./Frontend
-    platform: linux/amd64
-    container_name: elearning
-    ports:
-      - "5173:5173"
-    environment:
-      - NODE_ENV=development
-    networks:
-      - app-network
-    restart: always
-
+services: 
   backend:
     image: node:18-alpine 
     platform: linux/amd64
     container_name: express
     working_dir: /usr/src/app
     volumes:
-      - ./Backend:/usr/src/app
-    ports:
-      - "4500:4500"  # API server
+      - ./Backend:/usr/src/app 
     command: ["sh", "-c", "npm install && node server.js"]
+    ports:
+      - "8080:8080"
     env_file:
       - ./Backend/.env
     environment:
@@ -57,9 +45,7 @@ services:
     ports:
       - "222:80"
     depends_on:
-      - db
-    links:
-      - db
+      - db 
     networks:
       - app-network
     restart: always

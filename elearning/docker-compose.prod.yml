@@ -6,7 +6,7 @@ services:
     working_dir: /usr/src/app
     volumes:
       - ./Backend:/usr/src/app
-    command: sh -c "npm install && node server.js"
+    command: ["sh", "-c", "npm install && node server.js"]
     ports:
       - "8080:8080"
     env_file:
@@ -29,7 +29,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - ./mysql-data:/var/lib/mysql
     networks:
       - app-network
     restart: always
