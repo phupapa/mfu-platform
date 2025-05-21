@@ -12,7 +12,7 @@ mkdir -p dist/elearning
 # Move only if files exist
 
 if [ -d dist/assets ]; then
-  mv dist/assets dist/elearning/
+  cp dist/assets dist/elearning/
 fi
 
 echo "✅ Moved build files into dist/elearning/"
