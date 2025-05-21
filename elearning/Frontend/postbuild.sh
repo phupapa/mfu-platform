@@ -10,9 +10,6 @@ mkdir -p dist/elearning
 
 # 3. Move required files into dist/elearning
 # Move only if files exist
-if [ -f dist/index.html ]; then
-  mv dist/index.html dist/elearning/
-fi
 
 if [ -d dist/assets ]; then
   mv dist/assets dist/elearning/
